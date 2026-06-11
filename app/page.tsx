@@ -1,5 +1,11 @@
 'use client'
 
+import HumanReviewForm from '@/components/human-review-form'
+import {
+  createReviewedDiagnosis,
+  type ReviewStatus
+} from '@/lib/review'
+
 import type {
   DiagnosisResult,
   FeedbackInput
@@ -31,21 +37,21 @@ const exampleFeedback =
 
 type DiagnoseApiResponse =
   | {
-      success: true
-      data: DiagnosisResult
-      meta?: {
-        provider?: string
-        model?: string
-        promptVersion?: string
-      }
+    success: true
+    data: DiagnosisResult
+    meta?: {
+      provider?: string
+      model?: string
+      promptVersion?: string
     }
+  }
   | {
-      success: false
-      error: {
-        code: string
-        message: string
-      }
+    success: false
+    error: {
+      code: string
+      message: string
     }
+  }
 
 export default function GeoFeedbackPage() {
   const [feedbackText, setFeedbackText] = useState('')
@@ -59,7 +65,11 @@ export default function GeoFeedbackPage() {
 
   const [diagnosis, setDiagnosis] =
     useState<DiagnosisResult | null>(null)
+  const [reviewedDiagnosis, setReviewedDiagnosis] =
+    useState<DiagnosisResult | null>(null)
 
+  const [reviewStatus, setReviewStatus] =
+    useState<ReviewStatus>('not_reviewed')
   const [provider, setProvider] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -67,9 +77,11 @@ export default function GeoFeedbackPage() {
   const canDiagnose =
     feedbackText.trim().length > 0 && !loading
 
-  const markDiagnosisOutdated = () => {
+    const markDiagnosisOutdated = () => {
     if (diagnosis) {
       setDiagnosis(null)
+      setReviewedDiagnosis(null)
+      setReviewStatus('not_reviewed')
       setProvider('')
     }
 
@@ -80,349 +92,379 @@ export default function GeoFeedbackPage() {
     setFeedbackText(exampleFeedback)
     setProductType('导航与出行')
     setDiagnosis(null)
+    setReviewedDiagnosis(null)
+    setReviewStatus('not_reviewed')
     setProvider('')
     setErrorMessage('')
   }
+const handleDiagnose = async () => {
+  if (!canDiagnose) return
 
-  const handleDiagnose = async () => {
-    if (!canDiagnose) return
-
-    const input: FeedbackInput = {
-      feedbackText,
-      productName,
-      productType,
-      deviceInfo,
-      appVersion,
-      occurredAt,
-      location,
-      additionalContext
-    }
-
-    setLoading(true)
-    setErrorMessage('')
-    setDiagnosis(null)
-    setProvider('')
-
-    try {
-      const response = await fetch('/api/diagnose', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(input)
-      })
-
-      const result =
-        (await response.json()) as DiagnoseApiResponse
-
-      if (!response.ok || !result.success) {
-        const message = result.success
-          ? '诊断请求失败，请稍后重试'
-          : result.error.message
-
-        throw new Error(message)
-      }
-
-      setDiagnosis(result.data)
-      setProvider(result.meta?.provider ?? '')
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : '诊断请求失败，请稍后重试'
-
-      setErrorMessage(message)
-    } finally {
-      setLoading(false)
-    }
+  const input: FeedbackInput = {
+    feedbackText,
+    productName,
+    productType,
+    deviceInfo,
+    appVersion,
+    occurredAt,
+    location,
+    additionalContext
   }
 
-  return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
-              <MapPinned className="h-5 w-5" />
-            </div>
+  setLoading(true)
+  setErrorMessage('')
+  setDiagnosis(null)
+  setReviewedDiagnosis(null)
+  setReviewStatus('not_reviewed')
+  setProvider('')
 
-            <div>
-              <h1 className="text-lg font-semibold">
-                GeoFeedback Agent
-              </h1>
-              <p className="text-sm text-slate-500">
-                地图产品用户反馈诊断助手
-              </p>
-            </div>
+  try {
+    const response = await fetch('/api/diagnose', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(input)
+    })
+
+    const result =
+      (await response.json()) as DiagnoseApiResponse
+
+    if (!response.ok || !result.success) {
+      const message = result.success
+        ? '诊断请求失败，请稍后重试'
+        : result.error.message
+
+      throw new Error(message)
+    }
+
+    setDiagnosis(result.data)
+
+    setReviewedDiagnosis(
+      createReviewedDiagnosis(result.data)
+    )
+
+    setReviewStatus('reviewing')
+    setProvider(result.meta?.provider ?? '')
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : '诊断请求失败，请稍后重试'
+
+    setErrorMessage(message)
+  } finally {
+    setLoading(false)
+  }
+}
+
+return (
+  <main className="min-h-screen bg-slate-50 text-slate-900">
+    <header className="border-b border-slate-200 bg-white">
+      <div className="mx-auto flex max-w-[1440px] items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
+            <MapPinned className="h-5 w-5" />
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
-              Prompt V1
-            </span>
-
-            <span className="hidden items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 sm:flex">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              AI建议需人工确认
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-[1440px] gap-6 p-6 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.35fr)]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold">
-              输入用户反馈
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              粘贴一条地图、出行、航旅或GIS产品反馈。只有反馈原文为必填项。
+          <div>
+            <h1 className="text-lg font-semibold">
+              GeoFeedback Agent
+            </h1>
+            <p className="text-sm text-slate-500">
+              地图产品用户反馈诊断助手
             </p>
           </div>
+        </div>
 
-          <div className="space-y-5">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
+            Prompt V1
+          </span>
+
+          <span className="hidden items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 sm:flex">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            AI建议需人工确认
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <div className="mx-auto grid max-w-[1440px] gap-6 p-6 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.35fr)]">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold">
+            输入用户反馈
+          </h2>
+
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            粘贴一条地图、出行、航旅或GIS产品反馈。只有反馈原文为必填项。
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label
+                htmlFor="feedbackText"
+                className="text-sm font-medium text-slate-700"
+              >
+                用户反馈原文
+                <span className="ml-1 text-red-500">*</span>
+              </label>
+
+              <span className="text-xs text-slate-400">
+                {feedbackText.length} 字
+              </span>
+            </div>
+
+            <textarea
+              id="feedbackText"
+              value={feedbackText}
+              onChange={event => {
+                setFeedbackText(event.target.value)
+                markDiagnosisOutdated()
+              }}
+              rows={7}
+              placeholder="例如：开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。"
+              className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            />
+
+            {feedbackText.length > 0 &&
+              feedbackText.trim().length < 10 && (
+                <div className="mt-2 flex items-start gap-2 text-xs text-amber-700">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  当前反馈信息较少，AI可能只能判断为“信息不足”。
+                </div>
+              )}
+
+            <button
+              type="button"
+              onClick={handleUseExample}
+              className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              使用演示案例
+            </button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label
-                  htmlFor="feedbackText"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  用户反馈原文
-                  <span className="ml-1 text-red-500">*</span>
-                </label>
-
-                <span className="text-xs text-slate-400">
-                  {feedbackText.length} 字
+              <label
+                htmlFor="productName"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                产品名称
+                <span className="ml-1 font-normal text-slate-400">
+                  可选
                 </span>
-              </div>
+              </label>
 
-              <textarea
-                id="feedbackText"
-                value={feedbackText}
+              <input
+                id="productName"
+                value={productName}
                 onChange={event => {
-                  setFeedbackText(event.target.value)
+                  setProductName(event.target.value)
                   markDiagnosisOutdated()
                 }}
-                rows={7}
-                placeholder="例如：开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。"
-                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                placeholder="例如：某地图App"
+                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="productType"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                产品类型
+                <span className="ml-1 font-normal text-slate-400">
+                  可选
+                </span>
+              </label>
+
+              <select
+                id="productType"
+                value={productType}
+                onChange={event => {
+                  setProductType(event.target.value)
+                  markDiagnosisOutdated()
+                }}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+              >
+                <option value="">请选择产品类型</option>
+
+                {productTypes.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <details className="rounded-xl border border-slate-200 bg-slate-50">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
+              补充使用环境（可选）
+            </summary>
+
+            <div className="grid gap-4 border-t border-slate-200 p-4 sm:grid-cols-2">
+              <EnvironmentInput
+                id="deviceInfo"
+                label="设备与操作系统"
+                value={deviceInfo}
+                placeholder="例如：iPhone 15 / iOS 18"
+                onChange={value => {
+                  setDeviceInfo(value)
+                  markDiagnosisOutdated()
+                }}
               />
 
-              {feedbackText.length > 0 &&
-                feedbackText.trim().length < 10 && (
-                  <div className="mt-2 flex items-start gap-2 text-xs text-amber-700">
-                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    当前反馈信息较少，AI可能只能判断为“信息不足”。
-                  </div>
-                )}
+              <EnvironmentInput
+                id="appVersion"
+                label="产品版本"
+                value={appVersion}
+                placeholder="例如：12.3.0"
+                onChange={value => {
+                  setAppVersion(value)
+                  markDiagnosisOutdated()
+                }}
+              />
 
-              <button
-                type="button"
-                onClick={handleUseExample}
-                className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-              >
-                使用演示案例
-              </button>
-            </div>
+              <EnvironmentInput
+                id="occurredAt"
+                label="发生时间"
+                value={occurredAt}
+                placeholder="例如：2026-06-10 08:30"
+                onChange={value => {
+                  setOccurredAt(value)
+                  markDiagnosisOutdated()
+                }}
+              />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
+              <EnvironmentInput
+                id="location"
+                label="发生地点"
+                value={location}
+                placeholder="例如：机场高速某路段"
+                onChange={value => {
+                  setLocation(value)
+                  markDiagnosisOutdated()
+                }}
+              />
+
+              <div className="sm:col-span-2">
                 <label
-                  htmlFor="productName"
+                  htmlFor="additionalContext"
                   className="mb-2 block text-sm font-medium text-slate-700"
                 >
-                  产品名称
-                  <span className="ml-1 font-normal text-slate-400">
-                    可选
-                  </span>
+                  其他补充信息
                 </label>
 
-                <input
-                  id="productName"
-                  value={productName}
+                <textarea
+                  id="additionalContext"
+                  value={additionalContext}
                   onChange={event => {
-                    setProductName(event.target.value)
+                    setAdditionalContext(event.target.value)
                     markDiagnosisOutdated()
                   }}
-                  placeholder="例如：某地图App"
-                  className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  rows={3}
+                  placeholder="例如：是否可以稳定复现、网络状态、定位权限等"
+                  className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="productType"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  产品类型
-                  <span className="ml-1 font-normal text-slate-400">
-                    可选
-                  </span>
-                </label>
-
-                <select
-                  id="productType"
-                  value={productType}
-                  onChange={event => {
-                    setProductType(event.target.value)
-                    markDiagnosisOutdated()
-                  }}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                >
-                  <option value="">请选择产品类型</option>
-
-                  {productTypes.map(type => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
+          </details>
 
-            <details className="rounded-xl border border-slate-200 bg-slate-50">
-              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-slate-700">
-                补充使用环境（可选）
-              </summary>
+          <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
+            <div className="flex items-start gap-3">
+              <FileText className="mt-0.5 h-5 w-5 text-slate-400" />
 
-              <div className="grid gap-4 border-t border-slate-200 p-4 sm:grid-cols-2">
-                <EnvironmentInput
-                  id="deviceInfo"
-                  label="设备与操作系统"
-                  value={deviceInfo}
-                  placeholder="例如：iPhone 15 / iOS 18"
-                  onChange={value => {
-                    setDeviceInfo(value)
-                    markDiagnosisOutdated()
-                  }}
-                />
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  问题截图
+                </p>
 
-                <EnvironmentInput
-                  id="appVersion"
-                  label="产品版本"
-                  value={appVersion}
-                  placeholder="例如：12.3.0"
-                  onChange={value => {
-                    setAppVersion(value)
-                    markDiagnosisOutdated()
-                  }}
-                />
-
-                <EnvironmentInput
-                  id="occurredAt"
-                  label="发生时间"
-                  value={occurredAt}
-                  placeholder="例如：2026-06-10 08:30"
-                  onChange={value => {
-                    setOccurredAt(value)
-                    markDiagnosisOutdated()
-                  }}
-                />
-
-                <EnvironmentInput
-                  id="location"
-                  label="发生地点"
-                  value={location}
-                  placeholder="例如：机场高速某路段"
-                  onChange={value => {
-                    setLocation(value)
-                    markDiagnosisOutdated()
-                  }}
-                />
-
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="additionalContext"
-                    className="mb-2 block text-sm font-medium text-slate-700"
-                  >
-                    其他补充信息
-                  </label>
-
-                  <textarea
-                    id="additionalContext"
-                    value={additionalContext}
-                    onChange={event => {
-                      setAdditionalContext(event.target.value)
-                      markDiagnosisOutdated()
-                    }}
-                    rows={3}
-                    placeholder="例如：是否可以稳定复现、网络状态、定位权限等"
-                    className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  MVP先完成文本诊断。截图上传与多模态理解将在后续阶段接入。
+                </p>
               </div>
-            </details>
-
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
-              <div className="flex items-start gap-3">
-                <FileText className="mt-0.5 h-5 w-5 text-slate-400" />
-
-                <div>
-                  <p className="text-sm font-medium text-slate-700">
-                    问题截图
-                  </p>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    MVP先完成文本诊断。截图上传与多模态理解将在后续阶段接入。
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled
-                className="mt-4 w-full cursor-not-allowed rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400"
-              >
-                截图上传暂未开放
-              </button>
             </div>
 
             <button
               type="button"
-              disabled={!canDiagnose}
-              onClick={handleDiagnose}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled
+              className="mt-4 w-full cursor-not-allowed rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400"
             >
-              {loading ? (
-                <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  正在诊断…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  开始诊断
-                </>
-              )}
+              截图上传暂未开放
             </button>
-
-            <p className="text-center text-xs text-slate-400">
-              当前使用 Mock 模式验证流程，尚未调用真实模型。
-            </p>
           </div>
-        </section>
 
-        <section className="min-h-[680px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {loading ? (
-            <LoadingDiagnosisState />
-          ) : errorMessage ? (
-            <ErrorDiagnosisState
-              message={errorMessage}
-              onRetry={handleDiagnose}
-            />
-          ) : diagnosis ? (
+          <button
+            type="button"
+            disabled={!canDiagnose}
+            onClick={handleDiagnose}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {loading ? (
+              <>
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                正在诊断…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                开始诊断
+              </>
+            )}
+          </button>
+
+          <p className="text-center text-xs text-slate-400">
+            当前使用 Mock 模式验证流程，尚未调用真实模型。
+          </p>
+        </div>
+      </section>
+
+      <section className="min-h-[680px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {loading ? (
+          <LoadingDiagnosisState />
+        ) : errorMessage ? (
+          <ErrorDiagnosisState
+            message={errorMessage}
+            onRetry={handleDiagnose}
+          />
+        ) : diagnosis && reviewedDiagnosis ? (
+          <div className="space-y-8">
             <DiagnosisResultState
               diagnosis={diagnosis}
               provider={provider}
             />
-          ) : (
-            <EmptyDiagnosisState />
-          )}
-        </section>
-      </div>
-    </main>
-  )
+
+            <HumanReviewForm
+              original={diagnosis}
+              value={reviewedDiagnosis}
+              reviewStatus={reviewStatus}
+              onChange={nextValue => {
+                setReviewedDiagnosis(nextValue)
+                setReviewStatus('reviewing')
+              }}
+              onReset={() => {
+                setReviewedDiagnosis(
+                  createReviewedDiagnosis(diagnosis)
+                )
+                setReviewStatus('reviewing')
+              }}
+              onConfirm={() => {
+                setReviewStatus('confirmed')
+              }}
+            />
+          </div>
+        ) : (
+          <EmptyDiagnosisState />
+        )}
+      </section>
+    </div>
+  </main>
+)
 }
 
 type EnvironmentInputProps = {
@@ -795,16 +837,14 @@ function StringListCard({
 }) {
   return (
     <div
-      className={`rounded-xl border p-5 ${
-        warning
-          ? 'border-amber-200 bg-amber-50'
-          : 'border-slate-200 bg-white'
-      }`}
+      className={`rounded-xl border p-5 ${warning
+        ? 'border-amber-200 bg-amber-50'
+        : 'border-slate-200 bg-white'
+        }`}
     >
       <h3
-        className={`font-semibold ${
-          warning ? 'text-amber-900' : ''
-        }`}
+        className={`font-semibold ${warning ? 'text-amber-900' : ''
+          }`}
       >
         {title}
       </h3>
