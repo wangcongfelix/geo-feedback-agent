@@ -1,8 +1,10 @@
 'use client'
 
 import HumanReviewForm from '@/components/human-review-form'
+import TicketGenerator from '@/components/ticket-generator'
 import {
   createReviewedDiagnosis,
+  getModifiedFields,
   type ReviewStatus
 } from '@/lib/review'
 
@@ -70,6 +72,11 @@ export default function GeoFeedbackPage() {
 
   const [reviewStatus, setReviewStatus] =
     useState<ReviewStatus>('not_reviewed')
+  const [confirmedReview, setConfirmedReview] =
+    useState<{
+      modifiedFields: string[]
+      confirmedAt: string
+    } | null>(null)
   const [provider, setProvider] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -77,11 +84,23 @@ export default function GeoFeedbackPage() {
   const canDiagnose =
     feedbackText.trim().length > 0 && !loading
 
-    const markDiagnosisOutdated = () => {
+  const currentFeedbackInput: FeedbackInput = {
+    feedbackText,
+    productName,
+    productType,
+    deviceInfo,
+    appVersion,
+    occurredAt,
+    location,
+    additionalContext
+  }
+
+  const markDiagnosisOutdated = () => {
     if (diagnosis) {
       setDiagnosis(null)
       setReviewedDiagnosis(null)
       setReviewStatus('not_reviewed')
+      setConfirmedReview(null)
       setProvider('')
     }
 
@@ -94,6 +113,7 @@ export default function GeoFeedbackPage() {
     setDiagnosis(null)
     setReviewedDiagnosis(null)
     setReviewStatus('not_reviewed')
+    setConfirmedReview(null)
     setProvider('')
     setErrorMessage('')
   }
@@ -116,6 +136,7 @@ const handleDiagnose = async () => {
   setDiagnosis(null)
   setReviewedDiagnosis(null)
   setReviewStatus('not_reviewed')
+  setConfirmedReview(null)
   setProvider('')
 
   try {
@@ -446,17 +467,39 @@ return (
               onChange={nextValue => {
                 setReviewedDiagnosis(nextValue)
                 setReviewStatus('reviewing')
+                setConfirmedReview(null)
               }}
               onReset={() => {
                 setReviewedDiagnosis(
                   createReviewedDiagnosis(diagnosis)
                 )
                 setReviewStatus('reviewing')
+                setConfirmedReview(null)
               }}
               onConfirm={() => {
+                setConfirmedReview({
+                  modifiedFields: getModifiedFields(
+                    diagnosis,
+                    reviewedDiagnosis
+                  ),
+                  confirmedAt: new Date().toISOString()
+                })
                 setReviewStatus('confirmed')
               }}
             />
+
+            {reviewStatus === 'confirmed' &&
+              confirmedReview && (
+                <TicketGenerator
+                  key={confirmedReview.confirmedAt}
+                  diagnosis={reviewedDiagnosis}
+                  feedbackInput={currentFeedbackInput}
+                  modifiedFields={
+                    confirmedReview.modifiedFields
+                  }
+                  confirmedAt={confirmedReview.confirmedAt}
+                />
+              )}
           </div>
         ) : (
           <EmptyDiagnosisState />
@@ -780,7 +823,7 @@ function DiagnosisResultState({
 
       <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
         <ShieldCheck className="h-4 w-4 shrink-0" />
-        当前内容是AI初步建议，下一阶段将加入产品经理人工审核与修改。
+        当前内容是AI初步建议，请以产品经理人工审核后的确认结果生成问题单。
       </div>
     </div>
   )
