@@ -25,6 +25,42 @@ function createErrorResponse(
   )
 }
 
+function isTimeoutError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  return (
+    error.name.toLowerCase().includes('timeout') ||
+    error.message.toLowerCase().includes('timeout') ||
+    error.message.includes('timed out')
+  )
+}
+
+function parseJsonObject(content: string | null) {
+  if (!content) {
+    return null
+  }
+
+  try {
+    return JSON.parse(content) as unknown
+  } catch {
+    return null
+  }
+}
+
+function getTopLevelKeys(value: unknown) {
+  if (
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value)
+  ) {
+    return Object.keys(value)
+  }
+
+  return []
+}
+
 /**
  * Mock诊断结果。
  *
@@ -143,6 +179,116 @@ export async function POST(request: Request) {
       })
     }
 
+    const aiProvider =
+      process.env.AI_PROVIDER?.trim().toLowerCase() ||
+      'deepseek'
+
+    if (aiProvider === 'deepseek') {
+      const apiKey = process.env.DEEPSEEK_API_KEY
+
+      if (!apiKey) {
+        return createErrorResponse(
+          'API_KEY_MISSING',
+          '服务端尚未配置DeepSeek API Key',
+          500
+        )
+      }
+
+      const client = new OpenAI({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        baseURL: 'https://api.deepseek.com',
+        timeout: 30_000,
+        maxRetries: 0
+      })
+
+      const model =
+        process.env.DEEPSEEK_MODEL?.trim() ||
+        'deepseek-v4-flash'
+
+      try {
+        const completion =
+          await client.chat.completions.create({
+            model,
+            messages: [
+              {
+                role: 'system',
+                content: DIAGNOSIS_SYSTEM_PROMPT
+              },
+              {
+                role: 'user',
+                content: buildDiagnosisUserPrompt(feedbackInput)
+              }
+            ],
+            response_format: {
+              type: 'json_object'
+            }
+          })
+
+        const parsedJson = parseJsonObject(
+          completion.choices[0]?.message.content ?? null
+        )
+
+        if (!parsedJson) {
+          return createErrorResponse(
+            'MODEL_OUTPUT_INVALID',
+            'AI返回结果不是有效JSON，本次诊断未生成',
+            502
+          )
+        }
+
+        const diagnosisResult =
+          DiagnosisSchema.safeParse(parsedJson)
+
+        if (!diagnosisResult.success) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.error(
+              'Diagnosis schema validation failed. Parsed JSON top-level keys:',
+              getTopLevelKeys(parsedJson)
+            )
+            console.error(
+              'Diagnosis schema validation issues:',
+              diagnosisResult.error.issues
+            )
+          }
+
+          return createErrorResponse(
+            'MODEL_OUTPUT_INVALID',
+            'AI返回结果未通过结构校验',
+            502
+          )
+        }
+
+        return Response.json({
+          success: true,
+          data: diagnosisResult.data,
+          meta: {
+            provider: 'deepseek',
+            model,
+            promptVersion:
+              diagnosisResult.data.promptVersion
+          }
+        })
+      } catch (error) {
+        if (isTimeoutError(error)) {
+          return createErrorResponse(
+            'MODEL_TIMEOUT',
+            '模型服务响应超时，请稍后重试',
+            504
+          )
+        }
+
+        throw error
+      }
+    }
+
+    if (aiProvider !== 'gemini') {
+      return createErrorResponse(
+        'AI_PROVIDER_UNSUPPORTED',
+        '当前模型供应商配置暂不支持',
+        400
+      )
+    }
+
     const apiKey = process.env.GEMINI_API_KEY
 
     if (!apiKey) {
@@ -154,7 +300,7 @@ export async function POST(request: Request) {
     }
 
     /**
-     * 使用OpenAI SDK兼容方式调用Gemini。
+     * Gemini作为备用供应商保留。
      *
      * Google提供了OpenAI兼容接口，
      * 因此当前项目不需要重写完整模型调用层。

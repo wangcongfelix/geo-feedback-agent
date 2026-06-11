@@ -196,10 +196,47 @@ recommendedNextAction需要给出产品经理可执行的下一步动作。
 
 【输出要求】
 
+只返回一个合法JSON对象。
 严格按照系统提供的结构化Schema输出。
 不要输出Markdown、代码块、解释性前言或Schema之外的字段。
+不要使用Markdown代码围栏包裹结果。
+字段名、字段类型和枚举值必须严格符合DiagnosisSchema。
+未知信息不得虚构，必须使用“未知”“待补充”“信息不足”或空字符串等明确占位。
+所有字段必须存在，不允许返回null，不允许省略userScenario。
+无法判断某个字段时，也必须返回规定的兜底文本。
 
 promptVersion必须填写“v1”。
+
+【完整JSON字段示例】
+
+下面示例只用于约束字段结构。实际内容必须根据本次输入生成。
+
+{
+  "summary": "对问题现象进行简洁概括；无法判断时填写：当前反馈信息不足，待补充。",
+  "userScenario": "对用户当时使用产品的场景进行简洁描述；无法判断时填写：当前反馈未明确说明用户场景，待补充。",
+  "productModule": "其他或无法判断",
+  "issueType": "信息不足，暂时无法判断",
+  "alternativeIssueType": "无",
+  "actualResult": "当前反馈未明确说明实际结果，待补充。",
+  "expectedResult": "当前反馈未明确说明预期结果，待产品经理确认。",
+  "severitySuggestion": "待人工判断",
+  "prioritySuggestion": "待人工判断",
+  "confidenceLevel": "低",
+  "userFacts": [],
+  "aiInferences": [],
+  "evidenceQuotes": [],
+  "missingInformation": [
+    {
+      "field": "待补充的信息项",
+      "reason": "说明为什么需要该信息；无法判断时填写：用于进一步判断问题场景和类型。",
+      "status": "未提供",
+      "value": ""
+    }
+  ],
+  "uncertainty": "说明当前无法确认的内容；无法判断时填写：当前反馈信息不足，需产品经理补充确认。",
+  "recommendedNextAction": "给出产品经理可执行的下一步；无法判断时填写：建议补充用户场景、实际结果、发生环境和复现信息。",
+  "promptVersion": "v1"
+}
 `.trim()
 
 /**
@@ -214,6 +251,9 @@ export function buildDiagnosisUserPrompt(
   return [
     '请诊断以下一条用户反馈。',
     '输入JSON中的空字符串表示用户没有提供该信息。',
+    '请只返回符合DiagnosisSchema的JSON对象，不要返回Markdown代码块或任何解释性文字。',
+    '返回对象必须包含summary、userScenario、productModule、issueType、alternativeIssueType、actualResult、expectedResult、severitySuggestion、prioritySuggestion、confidenceLevel、userFacts、aiInferences、evidenceQuotes、missingInformation、uncertainty、recommendedNextAction和promptVersion。',
+    '所有字段都必须存在，不允许返回null，不允许省略userScenario；无法判断userScenario时填写：当前反馈未明确说明用户场景，待补充。',
     '只能基于以下内容进行判断：',
     JSON.stringify(input, null, 2)
   ].join('\n\n')
