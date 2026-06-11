@@ -14,8 +14,9 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Resume Extraction',
-  description: 'Resume Extraction demo with Structured Outputs',
+  title: 'GeoFeedback Agent',
+  description:
+    '地图产品用户反馈诊断与标准问题单生成工具',
   icons: {
     icon: '/imgs/convex_icon.svg'
   }
