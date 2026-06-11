@@ -1,14 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import type {
+  DiagnosisResult,
+  FeedbackInput
+} from '@/lib/diagnosis'
 import {
   AlertCircle,
   CheckCircle2,
   FileText,
+  LoaderCircle,
   MapPinned,
+  RefreshCw,
   ShieldCheck,
   Sparkles
 } from 'lucide-react'
+import { useState } from 'react'
 
 const productTypes = [
   '地图App',
@@ -23,6 +29,24 @@ const productTypes = [
 const exampleFeedback =
   '开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。'
 
+type DiagnoseApiResponse =
+  | {
+      success: true
+      data: DiagnosisResult
+      meta?: {
+        provider?: string
+        model?: string
+        promptVersion?: string
+      }
+    }
+  | {
+      success: false
+      error: {
+        code: string
+        message: string
+      }
+    }
+
 export default function GeoFeedbackPage() {
   const [feedbackText, setFeedbackText] = useState('')
   const [productName, setProductName] = useState('')
@@ -32,19 +56,85 @@ export default function GeoFeedbackPage() {
   const [occurredAt, setOccurredAt] = useState('')
   const [location, setLocation] = useState('')
   const [additionalContext, setAdditionalContext] = useState('')
-  const [showPrototypeResult, setShowPrototypeResult] = useState(false)
 
-  const canDiagnose = feedbackText.trim().length > 0
+  const [diagnosis, setDiagnosis] =
+    useState<DiagnosisResult | null>(null)
 
-  const handlePrototypeDiagnose = () => {
-    if (!canDiagnose) return
-    setShowPrototypeResult(true)
+  const [provider, setProvider] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const canDiagnose =
+    feedbackText.trim().length > 0 && !loading
+
+  const markDiagnosisOutdated = () => {
+    if (diagnosis) {
+      setDiagnosis(null)
+      setProvider('')
+    }
+
+    setErrorMessage('')
   }
 
   const handleUseExample = () => {
     setFeedbackText(exampleFeedback)
     setProductType('导航与出行')
-    setShowPrototypeResult(false)
+    setDiagnosis(null)
+    setProvider('')
+    setErrorMessage('')
+  }
+
+  const handleDiagnose = async () => {
+    if (!canDiagnose) return
+
+    const input: FeedbackInput = {
+      feedbackText,
+      productName,
+      productType,
+      deviceInfo,
+      appVersion,
+      occurredAt,
+      location,
+      additionalContext
+    }
+
+    setLoading(true)
+    setErrorMessage('')
+    setDiagnosis(null)
+    setProvider('')
+
+    try {
+      const response = await fetch('/api/diagnose', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(input)
+      })
+
+      const result =
+        (await response.json()) as DiagnoseApiResponse
+
+      if (!response.ok || !result.success) {
+        const message = result.success
+          ? '诊断请求失败，请稍后重试'
+          : result.error.message
+
+        throw new Error(message)
+      }
+
+      setDiagnosis(result.data)
+      setProvider(result.meta?.provider ?? '')
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : '诊断请求失败，请稍后重试'
+
+      setErrorMessage(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -57,7 +147,9 @@ export default function GeoFeedbackPage() {
             </div>
 
             <div>
-              <h1 className="text-lg font-semibold">GeoFeedback Agent</h1>
+              <h1 className="text-lg font-semibold">
+                GeoFeedback Agent
+              </h1>
               <p className="text-sm text-slate-500">
                 地图产品用户反馈诊断助手
               </p>
@@ -80,7 +172,10 @@ export default function GeoFeedbackPage() {
       <div className="mx-auto grid max-w-[1440px] gap-6 p-6 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.35fr)]">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold">输入用户反馈</h2>
+            <h2 className="text-xl font-semibold">
+              输入用户反馈
+            </h2>
+
             <p className="mt-2 text-sm leading-6 text-slate-500">
               粘贴一条地图、出行、航旅或GIS产品反馈。只有反馈原文为必填项。
             </p>
@@ -107,19 +202,20 @@ export default function GeoFeedbackPage() {
                 value={feedbackText}
                 onChange={event => {
                   setFeedbackText(event.target.value)
-                  setShowPrototypeResult(false)
+                  markDiagnosisOutdated()
                 }}
                 rows={7}
                 placeholder="例如：开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。"
                 className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
               />
 
-              {feedbackText.length > 0 && feedbackText.trim().length < 10 && (
-                <div className="mt-2 flex items-start gap-2 text-xs text-amber-700">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  当前反馈信息较少，后续AI可能只能判断为“信息不足”。
-                </div>
-              )}
+              {feedbackText.length > 0 &&
+                feedbackText.trim().length < 10 && (
+                  <div className="mt-2 flex items-start gap-2 text-xs text-amber-700">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    当前反馈信息较少，AI可能只能判断为“信息不足”。
+                  </div>
+                )}
 
               <button
                 type="button"
@@ -145,7 +241,10 @@ export default function GeoFeedbackPage() {
                 <input
                   id="productName"
                   value={productName}
-                  onChange={event => setProductName(event.target.value)}
+                  onChange={event => {
+                    setProductName(event.target.value)
+                    markDiagnosisOutdated()
+                  }}
                   placeholder="例如：某地图App"
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 />
@@ -165,10 +264,14 @@ export default function GeoFeedbackPage() {
                 <select
                   id="productType"
                   value={productType}
-                  onChange={event => setProductType(event.target.value)}
+                  onChange={event => {
+                    setProductType(event.target.value)
+                    markDiagnosisOutdated()
+                  }}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                 >
                   <option value="">请选择产品类型</option>
+
                   {productTypes.map(type => (
                     <option key={type} value={type}>
                       {type}
@@ -189,7 +292,10 @@ export default function GeoFeedbackPage() {
                   label="设备与操作系统"
                   value={deviceInfo}
                   placeholder="例如：iPhone 15 / iOS 18"
-                  onChange={setDeviceInfo}
+                  onChange={value => {
+                    setDeviceInfo(value)
+                    markDiagnosisOutdated()
+                  }}
                 />
 
                 <EnvironmentInput
@@ -197,7 +303,10 @@ export default function GeoFeedbackPage() {
                   label="产品版本"
                   value={appVersion}
                   placeholder="例如：12.3.0"
-                  onChange={setAppVersion}
+                  onChange={value => {
+                    setAppVersion(value)
+                    markDiagnosisOutdated()
+                  }}
                 />
 
                 <EnvironmentInput
@@ -205,7 +314,10 @@ export default function GeoFeedbackPage() {
                   label="发生时间"
                   value={occurredAt}
                   placeholder="例如：2026-06-10 08:30"
-                  onChange={setOccurredAt}
+                  onChange={value => {
+                    setOccurredAt(value)
+                    markDiagnosisOutdated()
+                  }}
                 />
 
                 <EnvironmentInput
@@ -213,7 +325,10 @@ export default function GeoFeedbackPage() {
                   label="发生地点"
                   value={location}
                   placeholder="例如：机场高速某路段"
-                  onChange={setLocation}
+                  onChange={value => {
+                    setLocation(value)
+                    markDiagnosisOutdated()
+                  }}
                 />
 
                 <div className="sm:col-span-2">
@@ -227,9 +342,10 @@ export default function GeoFeedbackPage() {
                   <textarea
                     id="additionalContext"
                     value={additionalContext}
-                    onChange={event =>
+                    onChange={event => {
                       setAdditionalContext(event.target.value)
-                    }
+                      markDiagnosisOutdated()
+                    }}
                     rows={3}
                     placeholder="例如：是否可以稳定复现、网络状态、定位权限等"
                     className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
@@ -246,6 +362,7 @@ export default function GeoFeedbackPage() {
                   <p className="text-sm font-medium text-slate-700">
                     问题截图
                   </p>
+
                   <p className="mt-1 text-xs leading-5 text-slate-500">
                     MVP先完成文本诊断。截图上传与多模态理解将在后续阶段接入。
                   </p>
@@ -264,24 +381,43 @@ export default function GeoFeedbackPage() {
             <button
               type="button"
               disabled={!canDiagnose}
-              onClick={handlePrototypeDiagnose}
+              onClick={handleDiagnose}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              <Sparkles className="h-4 w-4" />
-              开始诊断
+              {loading ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  正在诊断…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  开始诊断
+                </>
+              )}
             </button>
 
             <p className="text-center text-xs text-slate-400">
-              当前阶段为静态页面原型，尚未调用真实模型。
+              当前使用 Mock 模式验证流程，尚未调用真实模型。
             </p>
           </div>
         </section>
 
         <section className="min-h-[680px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          {!showPrototypeResult ? (
-            <EmptyDiagnosisState />
+          {loading ? (
+            <LoadingDiagnosisState />
+          ) : errorMessage ? (
+            <ErrorDiagnosisState
+              message={errorMessage}
+              onRetry={handleDiagnose}
+            />
+          ) : diagnosis ? (
+            <DiagnosisResultState
+              diagnosis={diagnosis}
+              provider={provider}
+            />
           ) : (
-            <PrototypeDiagnosisState feedbackText={feedbackText} />
+            <EmptyDiagnosisState />
           )}
         </section>
       </div>
@@ -339,7 +475,9 @@ function EmptyDiagnosisState() {
         <Sparkles className="h-7 w-7" />
       </div>
 
-      <h2 className="mt-5 text-xl font-semibold">等待诊断</h2>
+      <h2 className="mt-5 text-xl font-semibold">
+        等待诊断
+      </h2>
 
       <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
         AI将从用户场景、产品模块、问题类型、缺失信息和优先级等维度提供初步判断。
@@ -352,7 +490,9 @@ function EmptyDiagnosisState() {
             className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left"
           >
             <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-400" />
-            <span className="text-sm text-slate-600">{item}</span>
+            <span className="text-sm text-slate-600">
+              {item}
+            </span>
           </div>
         ))}
       </div>
@@ -365,53 +505,327 @@ function EmptyDiagnosisState() {
   )
 }
 
-function PrototypeDiagnosisState({
-  feedbackText
-}: {
-  feedbackText: string
-}) {
-  return (
-    <div>
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-        <div className="flex items-start gap-3">
-          <Sparkles className="mt-0.5 h-5 w-5 text-blue-600" />
+function LoadingDiagnosisState() {
+  const steps = [
+    '正在理解用户场景',
+    '正在识别产品模块',
+    '正在判断问题类型',
+    '正在检查缺失信息',
+    '正在生成诊断建议'
+  ]
 
-          <div>
-            <h2 className="font-semibold text-blue-900">
-              静态交互原型已运行
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-blue-700">
-              页面已经接收到反馈内容，但当前尚未调用模型。下一阶段将接入结构化诊断Schema和Prompt V1。
-            </p>
-          </div>
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <LoaderCircle className="h-5 w-5 animate-spin text-blue-600" />
+
+        <div>
+          <p className="font-medium text-blue-900">
+            正在诊断用户反馈
+          </p>
+          <p className="mt-1 text-sm text-blue-700">
+            请稍候，不要重复点击诊断按钮。
+          </p>
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl border border-slate-200 p-5">
-        <p className="text-sm font-medium text-slate-500">本次输入内容</p>
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-800">
-          {feedbackText}
+      {steps.map(step => (
+        <div
+          key={step}
+          className="h-16 animate-pulse rounded-xl bg-slate-100"
+        />
+      ))}
+    </div>
+  )
+}
+
+function ErrorDiagnosisState({
+  message,
+  onRetry
+}: {
+  message: string
+  onRetry: () => void
+}) {
+  return (
+    <div className="flex min-h-[620px] flex-col items-center justify-center text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+        <AlertCircle className="h-7 w-7" />
+      </div>
+
+      <h2 className="mt-5 text-xl font-semibold">
+        诊断失败
+      </h2>
+
+      <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+        {message}
+      </p>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-6 flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+      >
+        <RefreshCw className="h-4 w-4" />
+        重新诊断
+      </button>
+    </div>
+  )
+}
+
+function DiagnosisResultState({
+  diagnosis,
+  provider
+}: {
+  diagnosis: DiagnosisResult
+  provider: string
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+        <div>
+          <p className="text-sm font-medium text-blue-600">
+            AI初步诊断
+          </p>
+
+          <h2 className="mt-1 text-2xl font-semibold">
+            {diagnosis.summary}
+          </h2>
+        </div>
+
+        {provider && (
+          <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
+            Provider：{provider}
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewItem
+          label="产品模块"
+          value={diagnosis.productModule}
+        />
+        <OverviewItem
+          label="问题类型"
+          value={diagnosis.issueType}
+        />
+        <OverviewItem
+          label="严重程度"
+          value={diagnosis.severitySuggestion}
+        />
+        <OverviewItem
+          label="优先级"
+          value={diagnosis.prioritySuggestion}
+        />
+      </div>
+
+      <InfoCard title="用户使用场景">
+        <p>{diagnosis.userScenario}</p>
+      </InfoCard>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <InfoCard title="实际结果">
+          <p>{diagnosis.actualResult}</p>
+        </InfoCard>
+
+        <InfoCard title="预期结果">
+          <p>{diagnosis.expectedResult}</p>
+        </InfoCard>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <StringListCard
+          title="用户明确提供的事实"
+          items={diagnosis.userFacts}
+          emptyText="当前没有提取到明确事实"
+        />
+
+        <StringListCard
+          title="AI推测"
+          items={diagnosis.aiInferences}
+          emptyText="当前没有需要展示的推测"
+          warning
+        />
+      </div>
+
+      <StringListCard
+        title="用户原话证据"
+        items={diagnosis.evidenceQuotes}
+        emptyText="当前没有可引用的用户原话"
+      />
+
+      <InfoCard title="备选问题类型">
+        <p>{diagnosis.alternativeIssueType}</p>
+      </InfoCard>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-semibold">
+            缺失信息检查
+          </h3>
+
+          <span className="text-xs text-slate-400">
+            共 {diagnosis.missingInformation.length} 项
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {diagnosis.missingInformation.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+              当前没有识别到需要补充的信息。
+            </div>
+          ) : (
+            diagnosis.missingInformation.map(
+              (item, index) => (
+                <div
+                  key={`${item.field}-${index}`}
+                  className="rounded-xl border border-slate-200 p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium text-slate-800">
+                      {item.field}
+                    </p>
+
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    {item.reason}
+                  </p>
+
+                  {item.value && (
+                    <p className="mt-2 text-sm text-slate-700">
+                      当前值：{item.value}
+                    </p>
+                  )}
+                </div>
+              )
+            )
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <h3 className="font-semibold text-amber-900">
+          不确定性说明
+        </h3>
+
+        <p className="mt-2 text-sm leading-6 text-amber-800">
+          {diagnosis.uncertainty}
         </p>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        {[
-          ['用户场景', '等待AI识别'],
-          ['产品模块', '等待AI分类'],
-          ['问题类型', '等待AI判断'],
-          ['缺失信息', '等待AI检查']
-        ].map(([label, value]) => (
-          <div
-            key={label}
-            className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-          >
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              {label}
-            </p>
-            <p className="mt-2 text-sm font-medium text-slate-700">{value}</p>
-          </div>
-        ))}
+      <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+        <h3 className="font-semibold text-blue-900">
+          建议下一步
+        </h3>
+
+        <p className="mt-2 text-sm leading-6 text-blue-800">
+          {diagnosis.recommendedNextAction}
+        </p>
       </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
+        <span>
+          判断置信度：{diagnosis.confidenceLevel}
+        </span>
+
+        <span>
+          Prompt版本：{diagnosis.promptVersion}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
+        <ShieldCheck className="h-4 w-4 shrink-0" />
+        当前内容是AI初步建议，下一阶段将加入产品经理人工审核与修改。
+      </div>
+    </div>
+  )
+}
+
+function OverviewItem({
+  label,
+  value
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs font-medium text-slate-400">
+        {label}
+      </p>
+
+      <p className="mt-2 text-sm font-semibold text-slate-800">
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function InfoCard({
+  title,
+  children
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-5">
+      <h3 className="font-semibold">{title}</h3>
+
+      <div className="mt-3 text-sm leading-7 text-slate-600">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function StringListCard({
+  title,
+  items,
+  emptyText,
+  warning = false
+}: {
+  title: string
+  items: string[]
+  emptyText: string
+  warning?: boolean
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-5 ${
+        warning
+          ? 'border-amber-200 bg-amber-50'
+          : 'border-slate-200 bg-white'
+      }`}
+    >
+      <h3
+        className={`font-semibold ${
+          warning ? 'text-amber-900' : ''
+        }`}
+      >
+        {title}
+      </h3>
+
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-500">
+          {emptyText}
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {items.map((item, index) => (
+            <li
+              key={`${item}-${index}`}
+              className="flex items-start gap-2 text-sm leading-6 text-slate-600"
+            >
+              <CheckCircle2 className="mt-1 h-3.5 w-3.5 shrink-0" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
