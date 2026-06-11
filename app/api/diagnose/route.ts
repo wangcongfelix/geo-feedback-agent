@@ -8,12 +8,6 @@ import { zodResponseFormat } from 'openai/helpers/zod'
 
 export const runtime = 'nodejs'
 
-/**
- * 统一生成接口错误响应。
- *
- * 前端只需要识别 code 和 message，
- * 不直接暴露服务端堆栈或密钥信息。
- */
 function createErrorResponse(
   code: string,
   message: string,
@@ -31,35 +25,79 @@ function createErrorResponse(
   )
 }
 
+/**
+ * Mock诊断结果。
+ *
+ * 作用：
+ * 1. 不消耗API额度；
+ * 2. 让前端页面、人工审核、问题单生成可以先开发；
+ * 3. 保证返回结构符合DiagnosisSchema；
+ * 4. 后续接真实模型时不用重写前端。
+ */
+function createMockDiagnosis() {
+  return {
+    summary: '驾车导航持续推荐封闭道路',
+    userScenario: '用户驾车前往机场，并使用路线规划与导航功能。',
+    productModule: '路线规划与导航',
+    issueType: '地图或业务数据问题',
+    alternativeIssueType: '可能为路线规划Bug，需要进一步排查。',
+    actualResult: '导航持续推荐用户描述为已经封闭的道路。',
+    expectedResult: '用户可能期望导航避开不可通行道路，并重新规划可用路线。',
+    severitySuggestion: 'S2',
+    prioritySuggestion: '待人工判断',
+    confidenceLevel: '中',
+    userFacts: [
+      '用户正在开车去机场。',
+      '用户反馈导航推荐了一条已经封闭的路。',
+      '用户反馈重新规划后仍然推荐该道路。'
+    ],
+    aiInferences: [
+      '可能与道路通行数据未及时更新有关。',
+      '可能与路线规划未正确规避封闭道路有关。'
+    ],
+    evidenceQuotes: [
+      '开车去机场时',
+      '导航一直让我走一条已经封闭的路',
+      '重新规划后还是走这里'
+    ],
+    missingInformation: [
+      {
+        field: '发生时间',
+        reason: '用于判断是否为临时封路、实时路况延迟或长期道路数据问题。',
+        status: '未提供',
+        value: ''
+      },
+      {
+        field: '具体道路或位置',
+        reason: '用于定位涉及的道路数据或路线规划问题。',
+        status: '未提供',
+        value: ''
+      },
+      {
+        field: '起点和终点',
+        reason: '用于复现路线规划结果。',
+        status: '未提供',
+        value: ''
+      },
+      {
+        field: '产品版本',
+        reason: '用于排查是否与特定版本策略或客户端问题有关。',
+        status: '未提供',
+        value: ''
+      }
+    ],
+    uncertainty:
+      '当前无法确认这是道路通行数据未更新，还是路线规划策略没有正确规避封闭道路。',
+    recommendedNextAction:
+      '建议补充发生时间、具体道路、起点终点和截图后，由产品经理判断是否提交数据问题单或Bug单。',
+    promptVersion: 'v1'
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    /**
-     * 第一步：检查服务端是否配置了API Key。
-     *
-     * API Key只允许存在于服务端环境变量中，
-     * 不能由浏览器传进来。
-     */
-    const apiKey = process.env.OPENAI_API_KEY
-
-    if (!apiKey) {
-      return createErrorResponse(
-        'API_KEY_MISSING',
-        '服务端尚未配置模型API Key',
-        500
-      )
-    }
-
-    /**
-     * 第二步：读取浏览器提交的JSON。
-     */
     const requestBody: unknown = await request.json()
 
-    /**
-     * 第三步：校验输入。
-     *
-     * safeParse不会直接抛出异常，
-     * 而是返回success和校验结果。
-     */
     const inputResult = FeedbackInputSchema.safeParse(requestBody)
 
     if (!inputResult.success) {
@@ -79,48 +117,76 @@ export async function POST(request: Request) {
     const feedbackInput = inputResult.data
 
     /**
-     * 第四步：创建服务端OpenAI客户端。
+     * 默认使用Mock模式。
      *
-     * 放在POST函数内部，是为了避免没有配置密钥时，
-     * 项目启动阶段直接报错。
+     * 只要USE_MOCK_AI不是明确的false，
+     * 就不会调用真实模型。
      */
-    const openai = new OpenAI({
-      apiKey
+    const useMockAI = process.env.USE_MOCK_AI !== 'false'
+
+    if (useMockAI) {
+      const mockDiagnosis = createMockDiagnosis()
+      const parsedMock = DiagnosisSchema.parse(mockDiagnosis)
+
+      return Response.json({
+        success: true,
+        data: parsedMock,
+        meta: {
+          provider: 'mock',
+          model: 'mock-diagnosis-v1',
+          promptVersion: parsedMock.promptVersion,
+          inputEcho: {
+            feedbackText: feedbackInput.feedbackText,
+            productType: feedbackInput.productType
+          }
+        }
+      })
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY
+
+    if (!apiKey) {
+      return createErrorResponse(
+        'API_KEY_MISSING',
+        '服务端尚未配置Gemini API Key',
+        500
+      )
+    }
+
+    /**
+     * 使用OpenAI SDK兼容方式调用Gemini。
+     *
+     * Google提供了OpenAI兼容接口，
+     * 因此当前项目不需要重写完整模型调用层。
+     */
+    const client = new OpenAI({
+      apiKey,
+      baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
     })
 
     const model =
-      process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
+      process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
 
-    /**
-     * 第五步：调用模型并要求结构化输出。
-     *
-     * 当前项目沿用官方示例所使用的beta命名空间，
-     * 与项目当前安装的openai 4.x版本保持兼容。
-     */
-    const completion =
-      await openai.beta.chat.completions.parse({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: DIAGNOSIS_SYSTEM_PROMPT
-          },
-          {
-            role: 'user',
-            content: buildDiagnosisUserPrompt(feedbackInput)
-          }
-        ],
-        response_format: zodResponseFormat(
-          DiagnosisSchema,
-          'feedback_diagnosis'
-        )
-      })
+    const completion = await client.beta.chat.completions.parse({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: DIAGNOSIS_SYSTEM_PROMPT
+        },
+        {
+          role: 'user',
+          content: buildDiagnosisUserPrompt(feedbackInput)
+        }
+      ],
+      response_format: zodResponseFormat(
+        DiagnosisSchema,
+        'feedback_diagnosis'
+      )
+    })
 
     const message = completion.choices[0]?.message
 
-    /**
-     * 模型可能因为安全或其他原因拒绝回答。
-     */
     if (message?.refusal) {
       return createErrorResponse(
         'MODEL_REFUSAL',
@@ -129,9 +195,6 @@ export async function POST(request: Request) {
       )
     }
 
-    /**
-     * parsed是经过DiagnosisSchema解析后的结果。
-     */
     const diagnosis = message?.parsed
 
     if (!diagnosis) {
@@ -142,14 +205,7 @@ export async function POST(request: Request) {
       )
     }
 
-    /**
-     * 再执行一次本地Schema校验。
-     *
-     * 虽然SDK已经解析过，但这里属于服务端防御性校验，
-     * 确保发给前端的数据符合项目自己的规则。
-     */
-    const diagnosisResult =
-      DiagnosisSchema.safeParse(diagnosis)
+    const diagnosisResult = DiagnosisSchema.safeParse(diagnosis)
 
     if (!diagnosisResult.success) {
       console.error(
@@ -168,15 +224,12 @@ export async function POST(request: Request) {
       success: true,
       data: diagnosisResult.data,
       meta: {
+        provider: 'gemini',
         model,
         promptVersion: diagnosisResult.data.promptVersion
       }
     })
   } catch (error) {
-    /**
-     * 日志只记录错误对象，
-     * 不主动打印完整用户反馈或API Key。
-     */
     console.error('Diagnosis API error:', error)
 
     return createErrorResponse(
