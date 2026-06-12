@@ -26,6 +26,7 @@ type TicketGeneratorProps = {
   feedbackInput: FeedbackInput
   modifiedFields: string[]
   confirmedAt: string
+  attachmentNames?: string[]
 }
 
 const ticketTypes: TicketType[] = [
@@ -38,7 +39,8 @@ export default function TicketGenerator({
   diagnosis,
   feedbackInput,
   modifiedFields,
-  confirmedAt
+  confirmedAt,
+  attachmentNames = []
 }: TicketGeneratorProps) {
   const recommendedType = useMemo(
     () => recommendTicketType(diagnosis.issueType),
@@ -65,7 +67,8 @@ export default function TicketGenerator({
         diagnosis,
         feedbackInput,
         modifiedFields,
-        confirmedAt
+        confirmedAt,
+        attachmentNames
       })
     )
     setShowJson(false)
