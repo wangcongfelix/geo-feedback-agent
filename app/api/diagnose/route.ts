@@ -1,8 +1,17 @@
-import { DiagnosisSchema, FeedbackInputSchema } from '@/lib/diagnosis'
 import {
-  buildDiagnosisUserPrompt,
-  DIAGNOSIS_SYSTEM_PROMPT
+  DiagnosisSchema,
+  FeedbackInputSchema,
+  type FeedbackInput,
+  type PromptVersion
+} from '@/lib/diagnosis'
+import {
+  buildDiagnosisUserPrompt as buildDiagnosisUserPromptV1,
+  DIAGNOSIS_SYSTEM_PROMPT as DIAGNOSIS_SYSTEM_PROMPT_V1
 } from '@/lib/prompts/diagnosis-prompt'
+import {
+  buildDiagnosisUserPrompt as buildDiagnosisUserPromptV2,
+  DIAGNOSIS_SYSTEM_PROMPT as DIAGNOSIS_SYSTEM_PROMPT_V2
+} from '@/lib/prompts/diagnosis-prompt-v2'
 import OpenAI from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 
@@ -61,6 +70,38 @@ function getTopLevelKeys(value: unknown) {
   return []
 }
 
+type DiagnosisPromptConfig = {
+  promptVersion: PromptVersion
+  systemPrompt: string
+  buildUserPrompt: (input: FeedbackInput) => string
+}
+
+function getDiagnosisPromptConfig(): DiagnosisPromptConfig {
+  const promptVersion =
+    process.env.PROMPT_VERSION?.trim().toLowerCase()
+
+  if (promptVersion === 'v2') {
+    return {
+      promptVersion: 'v2',
+      systemPrompt: DIAGNOSIS_SYSTEM_PROMPT_V2,
+      buildUserPrompt: buildDiagnosisUserPromptV2
+    }
+  }
+
+  return {
+    promptVersion: 'v1',
+    systemPrompt: DIAGNOSIS_SYSTEM_PROMPT_V1,
+    buildUserPrompt: buildDiagnosisUserPromptV1
+  }
+}
+
+function isPromptVersionMismatch(
+  actual: PromptVersion,
+  expected: PromptVersion
+) {
+  return actual !== expected
+}
+
 /**
  * Mock诊断结果。
  *
@@ -70,7 +111,7 @@ function getTopLevelKeys(value: unknown) {
  * 3. 保证返回结构符合DiagnosisSchema；
  * 4. 后续接真实模型时不用重写前端。
  */
-function createMockDiagnosis() {
+function createMockDiagnosis(promptVersion: PromptVersion) {
   return {
     summary: '驾车导航持续推荐封闭道路',
     userScenario: '用户驾车前往机场，并使用路线规划与导航功能。',
@@ -126,7 +167,7 @@ function createMockDiagnosis() {
       '当前无法确认这是道路通行数据未更新，还是路线规划策略没有正确规避封闭道路。',
     recommendedNextAction:
       '建议补充发生时间、具体道路、起点终点和截图后，由产品经理判断是否提交数据问题单或Bug单。',
-    promptVersion: 'v1'
+    promptVersion
   }
 }
 
@@ -151,6 +192,7 @@ export async function POST(request: Request) {
     }
 
     const feedbackInput = inputResult.data
+    const promptConfig = getDiagnosisPromptConfig()
 
     /**
      * 默认使用Mock模式。
@@ -161,7 +203,9 @@ export async function POST(request: Request) {
     const useMockAI = process.env.USE_MOCK_AI !== 'false'
 
     if (useMockAI) {
-      const mockDiagnosis = createMockDiagnosis()
+      const mockDiagnosis = createMockDiagnosis(
+        promptConfig.promptVersion
+      )
       const parsedMock = DiagnosisSchema.parse(mockDiagnosis)
 
       return Response.json({
@@ -169,8 +213,8 @@ export async function POST(request: Request) {
         data: parsedMock,
         meta: {
           provider: 'mock',
-          model: 'mock-diagnosis-v1',
-          promptVersion: parsedMock.promptVersion,
+          model: `mock-diagnosis-${promptConfig.promptVersion}`,
+          promptVersion: promptConfig.promptVersion,
           inputEcho: {
             feedbackText: feedbackInput.feedbackText,
             productType: feedbackInput.productType
@@ -212,11 +256,12 @@ export async function POST(request: Request) {
             messages: [
               {
                 role: 'system',
-                content: DIAGNOSIS_SYSTEM_PROMPT
+                content: promptConfig.systemPrompt
               },
               {
                 role: 'user',
-                content: buildDiagnosisUserPrompt(feedbackInput)
+                content:
+                  promptConfig.buildUserPrompt(feedbackInput)
               }
             ],
             response_format: {
@@ -258,14 +303,26 @@ export async function POST(request: Request) {
           )
         }
 
+        if (
+          isPromptVersionMismatch(
+            diagnosisResult.data.promptVersion,
+            promptConfig.promptVersion
+          )
+        ) {
+          return createErrorResponse(
+            'MODEL_OUTPUT_INVALID',
+            'AI返回结果的Prompt版本与本次请求不一致',
+            502
+          )
+        }
+
         return Response.json({
           success: true,
           data: diagnosisResult.data,
           meta: {
             provider: 'deepseek',
             model,
-            promptVersion:
-              diagnosisResult.data.promptVersion
+            promptVersion: promptConfig.promptVersion
           }
         })
       } catch (error) {
@@ -318,11 +375,11 @@ export async function POST(request: Request) {
       messages: [
         {
           role: 'system',
-          content: DIAGNOSIS_SYSTEM_PROMPT
+          content: promptConfig.systemPrompt
         },
         {
           role: 'user',
-          content: buildDiagnosisUserPrompt(feedbackInput)
+          content: promptConfig.buildUserPrompt(feedbackInput)
         }
       ],
       response_format: zodResponseFormat(
@@ -366,13 +423,26 @@ export async function POST(request: Request) {
       )
     }
 
+    if (
+      isPromptVersionMismatch(
+        diagnosisResult.data.promptVersion,
+        promptConfig.promptVersion
+      )
+    ) {
+      return createErrorResponse(
+        'MODEL_OUTPUT_INVALID',
+        'AI返回结果的Prompt版本与本次请求不一致',
+        502
+      )
+    }
+
     return Response.json({
       success: true,
       data: diagnosisResult.data,
       meta: {
         provider: 'gemini',
         model,
-        promptVersion: diagnosisResult.data.promptVersion
+        promptVersion: promptConfig.promptVersion
       }
     })
   } catch (error) {

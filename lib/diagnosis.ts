@@ -81,6 +81,8 @@ export const ConfidenceLevelSchema = z.enum([
   '低'
 ])
 
+export const PromptVersionSchema = z.enum(['v1', 'v2'])
+
 /**
  * 单项缺失信息。
  */
@@ -157,7 +159,7 @@ export const DiagnosisSchema = z.object({
 
   recommendedNextAction: z.string(),
 
-  promptVersion: z.literal('v1')
+  promptVersion: PromptVersionSchema
 })
 
 /**
@@ -176,4 +178,8 @@ export type MissingInformationItem = z.infer<
 
 export type DiagnosisResult = z.infer<
   typeof DiagnosisSchema
+>
+
+export type PromptVersion = z.infer<
+  typeof PromptVersionSchema
 >

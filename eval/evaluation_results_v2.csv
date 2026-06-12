@@ -1,0 +1,16 @@
+﻿case_id,prompt_version,provider,model,predicted_module,expected_module,module_correct,predicted_issue_type,expected_issue_type,issue_type_correct,format_valid,hallucination_found,modified_field_count,processing_time_seconds,test_date,notes
+gs_v1_001,v2,deepseek,deepseek-v4-flash,搜索与POI,搜索与POI,true,地图或业务数据问题,地图或业务数据问题,true,true,,,10.982,2026-06-12T02:47:03.598Z,
+gs_v1_002,v2,deepseek,deepseek-v4-flash,地图展示与图层,地图展示与图层,true,信息不足，暂时无法判断,Bug,false,true,,,16.491,2026-06-12T02:47:16.094Z,
+gs_v1_003,v2,deepseek,deepseek-v4-flash,路线规划与导航,路线规划与导航,true,地图或业务数据问题,地图或业务数据问题,true,true,,,13.817,2026-06-12T02:47:34.090Z,
+gs_v1_004,v2,deepseek,deepseek-v4-flash,定位与轨迹,定位与轨迹,true,Bug,Bug,true,true,,,15.330,2026-06-12T02:47:49.422Z,
+gs_v1_005,,,,,离线地图、文件与数据管理,false,,Bug,false,false,,,12.019,2026-06-12T02:48:06.255Z,HTTP 502; code=MODEL_OUTPUT_INVALID; message=AI返回结果未通过结构校验
+gs_v1_006,v2,deepseek,deepseek-v4-flash,实时交通、航班与出行信息,实时交通、航班与出行信息,true,Bug,地图或业务数据问题,false,true,,,9.204,2026-06-12T02:48:19.789Z,
+gs_v1_007,v2,deepseek,deepseek-v4-flash,账号、收藏与数据同步,账号、收藏与数据同步,true,信息不足，暂时无法判断,Bug,false,true,,,18.274,2026-06-12T02:48:30.498Z,
+gs_v1_008,v2,deepseek,deepseek-v4-flash,B端平台配置与数据处理,B端平台配置与数据处理,true,Bug,Bug,true,true,,,8.838,2026-06-12T02:48:50.287Z,
+gs_v1_009,v2,deepseek,deepseek-v4-flash,路线规划与导航,路线规划与导航,true,产品需求,产品需求,true,true,,,12.083,2026-06-12T02:49:00.638Z,
+gs_v1_010,v2,deepseek,deepseek-v4-flash,离线地图、文件与数据管理,离线地图、文件与数据管理,true,使用咨询或操作问题,Bug,false,true,,,9.458,2026-06-12T02:49:14.225Z,
+gs_v1_011,v2,deepseek,deepseek-v4-flash,地图展示与图层,地图展示与图层,true,使用咨询或操作问题,使用咨询或操作问题,true,true,,,15.559,2026-06-12T02:49:25.186Z,
+gs_v1_012,v2,deepseek,deepseek-v4-flash,定位与轨迹,定位与轨迹,true,信息不足，暂时无法判断,信息不足，暂时无法判断,true,true,,,9.095,2026-06-12T02:49:42.260Z,
+gs_v1_013,v2,deepseek,deepseek-v4-flash,实时交通、航班与出行信息,实时交通、航班与出行信息,true,地图或业务数据问题,地图或业务数据问题,true,true,,,8.889,2026-06-12T02:49:52.861Z,
+gs_v1_014,v2,deepseek,deepseek-v4-flash,离线地图、文件与数据管理,定位与轨迹,false,Bug,Bug,true,true,,,12.665,2026-06-12T02:50:03.266Z,
+gs_v1_015,v2,deepseek,deepseek-v4-flash,搜索与POI,搜索与POI,true,地图或业务数据问题,地图或业务数据问题,true,true,,,10.325,2026-06-12T02:50:17.445Z,

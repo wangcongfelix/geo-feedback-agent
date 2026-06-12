@@ -1,5 +1,6 @@
 import { performance } from 'node:perf_hooks'
 import {
+  access,
   mkdir,
   readFile,
   writeFile
@@ -11,10 +12,11 @@ const BASE_URL =
   'http://localhost:3000/api/diagnose'
 
 const GOLDEN_SET_PATH = resolve('eval/golden_set.json')
-const RESULTS_PATH = resolve('eval/evaluation_results.csv')
 const RUNS_DIR = resolve('eval/runs')
 const REQUEST_DELAY_MS = 1500
 const EVAL_LIMIT = parseEvalLimit(process.env.EVAL_LIMIT)
+const EVAL_OVERWRITE = process.env.EVAL_OVERWRITE === 'true'
+const VALID_PROMPT_VERSIONS = new Set(['v1', 'v2'])
 
 const CSV_COLUMNS = [
   'case_id',
@@ -49,9 +51,10 @@ async function main() {
   const rows = []
   const runRecords = []
   const runStartedAt = new Date()
+  let resolvedOutput = null
 
   console.log(
-    `Evaluating ${casesToRun.length} of ${goldenSet.length} cases against ${BASE_URL}`
+    `Preparing to evaluate ${casesToRun.length} of ${goldenSet.length} cases against ${BASE_URL}`
   )
 
   for (let index = 0; index < casesToRun.length; index += 1) {
@@ -66,18 +69,46 @@ async function main() {
     )
 
     const result = await evaluateCase(testCase)
+
+    if (result.runRecord.success) {
+      assertValidPromptVersion(result.runRecord.promptVersion)
+
+      if (!resolvedOutput) {
+        resolvedOutput = await resolveOutputTargets({
+          runStartedAt,
+          promptVersion: result.runRecord.promptVersion,
+          provider: result.runRecord.provider,
+          model: result.runRecord.model,
+          caseCount: casesToRun.length
+        })
+      } else if (
+        result.runRecord.promptVersion !==
+        resolvedOutput.promptVersion
+      ) {
+        throw new Error(
+          `Prompt version changed during evaluation: expected ${resolvedOutput.promptVersion}, got ${result.runRecord.promptVersion}; no result files were written.`
+        )
+      }
+    }
+
     rows.push(result.row)
     runRecords.push(result.runRecord)
   }
 
-  await writeCsv(RESULTS_PATH, rows)
+  if (!resolvedOutput) {
+    throw new Error(
+      'No successful response returned a promptVersion; no result files were written.'
+    )
+  }
+
+  await writeCsv(resolvedOutput.resultsPath, rows)
   const runPath = await writeRunJson({
-    runStartedAt,
+    runPath: resolvedOutput.runPath,
     records: runRecords
   })
 
   console.log(
-    `Wrote ${rows.length} result rows to ${RESULTS_PATH}`
+    `Wrote ${rows.length} result rows to ${resolvedOutput.resultsPath}`
   )
   console.log(`Wrote detailed run output to ${runPath}`)
 }
@@ -124,9 +155,7 @@ async function evaluateCase(testCase) {
     const provider = asString(responseJson.meta?.provider ?? '')
     const model = asString(responseJson.meta?.model ?? '')
     const promptVersion = asString(
-      responseJson.meta?.promptVersion ??
-        responseJson.data?.promptVersion ??
-        ''
+      responseJson.meta?.promptVersion ?? ''
     )
     const predictedModule = asString(diagnosis?.productModule)
     const predictedIssueType = asString(diagnosis?.issueType)
@@ -274,20 +303,89 @@ async function writeCsv(filePath, rows) {
   await writeFile(filePath, csv, 'utf8')
 }
 
-async function writeRunJson({ runStartedAt, records }) {
-  await mkdir(RUNS_DIR, { recursive: true })
+async function resolveOutputTargets({
+  runStartedAt,
+  promptVersion,
+  provider,
+  model,
+  caseCount
+}) {
+  const resultsPath = resolve(
+    'eval',
+    `evaluation_results_${promptVersion}.csv`
+  )
+  const runPath = buildRunJsonPath({
+    runStartedAt,
+    promptVersion,
+    provider
+  })
 
-  const firstRecord = records[0]
-  const promptVersion =
-    firstRecord?.promptVersion || 'prompt_unknown'
-  const provider = firstRecord?.provider || 'provider_unknown'
+  await assertCanWriteResults(resultsPath)
+
+  console.log('Evaluation output resolved:')
+  console.log(`- Request URL: ${BASE_URL}`)
+  console.log(`- Prompt version: ${promptVersion}`)
+  console.log(`- Provider: ${provider || '(empty)'}`)
+  console.log(`- Model: ${model || '(empty)'}`)
+  console.log(`- Case count: ${caseCount}`)
+  console.log(`- CSV output path: ${resultsPath}`)
+  console.log(`- Run JSON output path: ${runPath}`)
+
+  return {
+    promptVersion,
+    resultsPath,
+    runPath
+  }
+}
+
+function assertValidPromptVersion(promptVersion) {
+  if (!VALID_PROMPT_VERSIONS.has(promptVersion)) {
+    throw new Error(
+      `Invalid promptVersion returned by API: "${promptVersion || '(empty)'}". Expected "v1" or "v2"; no result files were written.`
+    )
+  }
+}
+
+async function assertCanWriteResults(filePath) {
+  if (EVAL_OVERWRITE) {
+    return
+  }
+
+  if (await fileExists(filePath)) {
+    throw new Error(
+      `Refusing to overwrite existing CSV: ${filePath}. Set EVAL_OVERWRITE=true to overwrite it.`
+    )
+  }
+}
+
+async function fileExists(filePath) {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function buildRunJsonPath({
+  runStartedAt,
+  promptVersion,
+  provider
+}) {
+  const safePromptVersion = promptVersion || 'prompt_unknown'
+  const safeProvider = provider || 'provider_unknown'
   const timestamp = runStartedAt
     .toISOString()
     .replace(/[:.]/g, '')
-  const runPath = resolve(
+
+  return resolve(
     RUNS_DIR,
-    `${promptVersion}_${provider}_${timestamp}.json`
+    `${safePromptVersion}_${safeProvider}_${timestamp}.json`
   )
+}
+
+async function writeRunJson({ runPath, records }) {
+  await mkdir(RUNS_DIR, { recursive: true })
 
   await writeFile(
     runPath,
@@ -308,9 +406,7 @@ function buildRunRecord({
   const provider = asString(payload?.meta?.provider ?? '')
   const model = asString(payload?.meta?.model ?? '')
   const promptVersion = asString(
-    payload?.meta?.promptVersion ??
-      payload?.data?.promptVersion ??
-      ''
+    payload?.meta?.promptVersion ?? ''
   )
 
   return {
