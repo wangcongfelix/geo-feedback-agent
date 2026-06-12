@@ -1,0 +1,382 @@
+[
+  {
+    "id": "gs_v1_001",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "这个商场已经改名半年了，地图上还是显示旧名字，搜索新名字也搜不到。",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "搜索与POI",
+    "expectedIssueType": "地图或业务数据问题",
+    "expectedMissingInformation": [
+      "POI准确位置",
+      "旧名称",
+      "正确名称",
+      "佐证材料"
+    ],
+    "annotationReason": "反馈直接指向POI名称过期和搜索结果无法命中新名称，主要是地点数据维护问题。",
+    "ambiguityNotes": "如果搜索新名称失败是搜索召回策略问题，也可能存在搜索功能Bug；但当前证据更支持POI数据问题。"
+  },
+  {
+    "id": "gs_v1_002",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "打开地图后道路和建筑都显示正常，但公交站图层突然全部不显示了，切换缩放也没用。",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": "用户明确说其他底图内容可见，仅公交站图层不可见。"
+    },
+    "expectedProductModule": "地图展示与图层",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "产品版本",
+      "发生城市或地图区域",
+      "设备与系统",
+      "是否稳定复现",
+      "截图或录屏"
+    ],
+    "annotationReason": "反馈描述特定图层显示异常，且用户尝试缩放仍无效，符合地图展示与图层模块的功能异常。",
+    "ambiguityNotes": "如果公交站数据源临时缺失，也可能是数据问题；需要结合区域和时间确认。"
+  },
+  {
+    "id": "gs_v1_003",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。",
+    "optionalContext": {
+      "productType": "导航与出行",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "路线规划与导航",
+    "expectedIssueType": "地图或业务数据问题",
+    "expectedMissingInformation": [
+      "发生时间",
+      "具体道路或位置",
+      "起点",
+      "终点",
+      "产品版本",
+      "截图或录屏"
+    ],
+    "annotationReason": "道路已封闭但仍被路线推荐，主要涉及道路通行数据或实时交通数据未更新。",
+    "ambiguityNotes": "也可能是路线规划Bug未正确规避限制道路；标准答案暂以数据问题为主，人工验收时应关注模型是否说明该不确定性。"
+  },
+  {
+    "id": "gs_v1_004",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "从地铁站出来后定位箭头一直停在站里不动，关掉App重新打开才恢复。",
+    "optionalContext": {
+      "productType": "导航与出行",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "地铁站附近",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "定位与轨迹",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "设备型号",
+      "操作系统",
+      "产品版本",
+      "定位权限",
+      "网络状态",
+      "是否稳定复现"
+    ],
+    "annotationReason": "定位箭头停止更新且重启App恢复，符合定位能力异常的Bug候选。",
+    "ambiguityNotes": "地铁站出入口附近可能存在弱定位环境，不能断言一定是客户端Bug；需要设备和环境信息进一步确认。"
+  },
+  {
+    "id": "gs_v1_005",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "导入shp后图层能显示，但属性表里的中文全是乱码。",
+    "optionalContext": {
+      "productType": "GIS或地图数据平台",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": "反馈来自B端GIS平台文件导入场景。"
+    },
+    "expectedProductModule": "离线地图、文件与数据管理",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "文件编码",
+      "文件格式详情",
+      "平台版本",
+      "浏览器",
+      "示例文件或截图"
+    ],
+    "annotationReason": "shp导入后空间图层可显示但属性表中文乱码，核心是文件导入和数据属性展示异常。",
+    "ambiguityNotes": "如果文件本身编码不符合要求，也可能是使用咨询或操作问题；当前反馈不足以确认根因。"
+  },
+  {
+    "id": "gs_v1_006",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "航班已经延误两个小时了，页面上还是显示准点。",
+    "optionalContext": {
+      "productType": "航旅信息",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "实时交通、航班与出行信息",
+    "expectedIssueType": "地图或业务数据问题",
+    "expectedMissingInformation": [
+      "航班号",
+      "日期",
+      "实际延误信息来源",
+      "页面截图",
+      "刷新时间"
+    ],
+    "annotationReason": "航班实时状态与用户描述的实际状态不一致，主要属于航班业务数据更新问题。",
+    "ambiguityNotes": "如果数据已更新但页面缓存未刷新，也可能是页面Bug；人工验收时应检查模型是否保留该备选判断。"
+  },
+  {
+    "id": "gs_v1_007",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "我收藏的几个地点换了新手机登录后都不见了，账号还是同一个。",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "新手机，具体型号未提供",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "账号、收藏与数据同步",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "账号登录状态",
+      "旧设备与新设备信息",
+      "产品版本",
+      "收藏数据是否在旧设备仍存在",
+      "同步开关状态"
+    ],
+    "annotationReason": "同一账号换设备后收藏地点消失，核心涉及收藏和账号数据同步异常。",
+    "ambiguityNotes": "也可能是用户未开启同步或登录了不同账号体系；当前反馈声称账号相同，但仍需核验。"
+  },
+  {
+    "id": "gs_v1_008",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "在后台发布新的矢量瓦片服务后，前台图层列表里一直看不到这个服务。",
+    "optionalContext": {
+      "productType": "GIS或地图数据平台",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": "B端平台配置与服务发布场景。"
+    },
+    "expectedProductModule": "B端平台配置与数据处理",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "平台版本",
+      "服务发布配置",
+      "权限配置",
+      "刷新或缓存情况",
+      "浏览器与账号角色"
+    ],
+    "annotationReason": "反馈描述后台配置/发布后前台不可见，属于B端平台配置与服务发布链路异常。",
+    "ambiguityNotes": "如果是权限或配置步骤遗漏，也可能是使用咨询或操作问题；需要配置截图和账号权限确认。"
+  },
+  {
+    "id": "gs_v1_009",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "能不能在骑行路线里加一个尽量少爬坡的选项？现在推荐的路坡太多了。",
+    "optionalContext": {
+      "productType": "导航与出行",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "路线规划与导航",
+    "expectedIssueType": "产品需求",
+    "expectedMissingInformation": [
+      "使用城市或区域",
+      "骑行起点",
+      "骑行终点",
+      "用户偏好的路线策略",
+      "现有替代方案"
+    ],
+    "annotationReason": "用户明确提出新增路线策略选项，不是现有功能异常，属于产品需求。",
+    "ambiguityNotes": "如果产品已有少爬坡策略但未生效，可能转为Bug；当前反馈没有说明已有该功能。"
+  },
+  {
+    "id": "gs_v1_010",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "离线地图下载完成后，我断网打开还是看不到城市地图。",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "离线地图、文件与数据管理",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "下载城市",
+      "产品版本",
+      "设备存储状态",
+      "离线包下载完成截图",
+      "断网后的操作路径"
+    ],
+    "annotationReason": "离线地图下载后断网不可见，指向离线数据管理或读取异常。",
+    "ambiguityNotes": "如果用户没有切换到离线地图入口或下载不完整，也可能是操作问题；需要操作路径确认。"
+  },
+  {
+    "id": "gs_v1_011",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "我想把等高线和卫星图一起显示，这个在哪里开？",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "地图展示与图层",
+    "expectedIssueType": "使用咨询或操作问题",
+    "expectedMissingInformation": [
+      "产品版本",
+      "当前页面入口",
+      "是否已开通对应图层能力",
+      "截图"
+    ],
+    "annotationReason": "反馈以询问功能入口为主，尚未描述产品异常，属于图层使用咨询。",
+    "ambiguityNotes": "如果产品确实不支持组合显示，也可能引出产品需求；当前标准答案按咨询处理。"
+  },
+  {
+    "id": "gs_v1_012",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "定位又不准了。",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "定位与轨迹",
+    "expectedIssueType": "信息不足，暂时无法判断",
+    "expectedMissingInformation": [
+      "具体定位偏差表现",
+      "发生地点",
+      "发生时间",
+      "设备型号",
+      "操作系统",
+      "定位权限",
+      "网络状态",
+      "是否稳定复现"
+    ],
+    "annotationReason": "反馈只有笼统现象，能大致指向定位模块，但不足以判断Bug、环境问题或使用问题。",
+    "ambiguityNotes": "模块判断相对明确，但问题类型不应强行分类；人工验收时应鼓励模型选择信息不足。"
+  },
+  {
+    "id": "gs_v1_013",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "公交车还有两站才到，但地图上显示已经到站了。",
+    "optionalContext": {
+      "productType": "智能交通",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "实时交通、航班与出行信息",
+    "expectedIssueType": "地图或业务数据问题",
+    "expectedMissingInformation": [
+      "公交线路",
+      "站点名称",
+      "发生时间",
+      "城市",
+      "实际车辆位置来源",
+      "页面截图"
+    ],
+    "annotationReason": "公交实时到站信息与用户观察不一致，核心是实时出行数据准确性问题。",
+    "ambiguityNotes": "如果数据正确但前端状态渲染错误，也可能是Bug；当前反馈更支持实时数据问题。"
+  },
+  {
+    "id": "gs_v1_014",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "轨迹记录结束后导出的GPX文件没有最后五分钟的路线。",
+    "optionalContext": {
+      "productType": "导航与出行",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "定位与轨迹",
+    "expectedIssueType": "Bug",
+    "expectedMissingInformation": [
+      "产品版本",
+      "设备型号",
+      "轨迹记录时长",
+      "导出操作路径",
+      "原始轨迹是否完整",
+      "示例GPX文件"
+    ],
+    "annotationReason": "轨迹记录导出文件缺少末段路线，属于轨迹记录或导出链路异常。",
+    "ambiguityNotes": "如果原始轨迹本身未记录最后五分钟，问题可能发生在定位记录而不是导出；需要原始轨迹页面对比。"
+  },
+  {
+    "id": "gs_v1_015",
+    "sourceType": "synthetic_test_case",
+    "feedbackText": "搜索公司楼下的充电站，结果里有一个已经拆掉的站点，还显示可用。",
+    "optionalContext": {
+      "productType": "地图App",
+      "productName": "",
+      "deviceInfo": "",
+      "appVersion": "",
+      "occurredAt": "",
+      "location": "公司楼下，具体地址未提供",
+      "additionalContext": ""
+    },
+    "expectedProductModule": "搜索与POI",
+    "expectedIssueType": "地图或业务数据问题",
+    "expectedMissingInformation": [
+      "充电站名称",
+      "具体地址",
+      "拆除时间或佐证材料",
+      "搜索关键词",
+      "页面截图"
+    ],
+    "annotationReason": "搜索结果包含已拆除且状态错误的充电站，指向POI存在性和状态数据问题。",
+    "ambiguityNotes": "如果只是充电桩实时可用状态更新延迟，也可能涉及业务实时数据；当前以POI数据问题作为标准答案。"
+  }
+]

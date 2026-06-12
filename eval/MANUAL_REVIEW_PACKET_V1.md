@@ -1,0 +1,882 @@
+# Prompt V1 ??????
+
+> ?? run JSON?eval/runs/v1_deepseek_2026-06-11T141319652Z.json
+> ???????????????????????????????????
+
+## ????
+
+- ????? userFacts ?????????
+- ????? evidenceQuotes ???????????
+- ????? aiInferences ????????????
+- ?????????????? modified_field_count?
+
+## gs_v1_001
+
+1. case_id: gs_v1_001
+2. ????: 这个商场已经改名半年了，地图上还是显示旧名字，搜索新名字也搜不到。
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 搜索与POI
+5. ??????: 搜索与POI
+6. ??????: 地图或业务数据问题
+7. ????????: 地图或业务数据问题
+8. summary: 商场改名半年后地图仍显示旧名且新名搜索不到
+9. userScenario: 用户在地图App中搜索已改名的商场，希望找到新名称的POI
+10. userFacts:
+- 商场已经改名半年
+- 地图上还是显示旧名字
+- 搜索新名字也搜不到
+11. evidenceQuotes:
+- 这个商场已经改名半年了，地图上还是显示旧名字，搜索新名字也搜不到。
+12. aiInferences:
+- 可能该商场的POI数据未及时更新，需要进一步确认数据源更新周期。
+13. missingInformation:
+- 具体商场名称
+  - status: 未提供
+  - value: ???
+  - reason: 用于定位具体POI数据问题
+- 地图App产品名称
+  - status: 未提供
+  - value: ???
+  - reason: 确认产品归属以便数据修复
+- 用户所在城市
+  - status: 未提供
+  - value: ???
+  - reason: 确认数据更新区域
+14. actualResult: 用户反馈地图上仍显示商场旧名字，搜索新名字也搜不到。
+15. expectedResult: 用户可能期望地图显示商场新名字，且通过新名字能搜索到该地点。
+16. severitySuggestion: S3
+17. prioritySuggestion: P1
+18. uncertainty: 用户未提供具体商场名称和产品名称，无法确认数据更新问题是否已上报或存在其他原因。
+19. recommendedNextAction: 建议产品经理联系数据运营确认该商场的POI数据状态，并补充用户具体位置信息以核实。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_002
+
+1. case_id: gs_v1_002
+2. ????: 打开地图后道路和建筑都显示正常，但公交站图层突然全部不显示了，切换缩放也没用。
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: 用户明确说其他底图内容可见，仅公交站图层不可见。
+4. ??????: 地图展示与图层
+5. ??????: 地图展示与图层
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 公交站图层突然全部不显示
+9. userScenario: 用户打开地图查看公交站信息
+10. userFacts:
+- 打开地图后道路和建筑都显示正常
+- 公交站图层突然全部不显示
+- 切换缩放也没用
+11. evidenceQuotes:
+- 打开地图后道路和建筑都显示正常，但公交站图层突然全部不显示
+- 切换缩放也没用
+12. aiInferences:
+- 可能与图层开关、数据加载或网络请求有关
+- 需要进一步确认是否仅限特定区域或用户
+13. missingInformation:
+- 设备型号与操作系统
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是否与设备兼容性有关
+- App版本
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是否为已知版本问题
+- 发生地点与时间
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是否与区域数据或时段有关
+- 问题出现前是否进行过操作（如切换图层、更新数据）
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断触发条件
+14. actualResult: 地图上道路和建筑正常显示，但公交站图层全部不显示，切换缩放无效。
+15. expectedResult: 公交站图层应正常显示。
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 当前无法确定是客户端渲染Bug还是后端数据问题，需补充更多信息。
+19. recommendedNextAction: 建议用户提供设备型号、App版本、发生地点和截图，并尝试重启App或清除缓存；同时检查图层开关设置。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_003
+
+1. case_id: gs_v1_003
+2. ????: 开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。
+3. ??????:
+- productName: ???
+- productType: 导航与出行
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 路线规划与导航
+5. ??????: 路线规划与导航
+6. ??????: 地图或业务数据问题
+7. ????????: 地图或业务数据问题
+8. summary: 导航持续推荐已封闭道路
+9. userScenario: 用户开车前往机场，使用导航时遇到已封闭道路仍被规划
+10. userFacts:
+- 用户开车去机场
+- 导航一直让用户走一条已经封闭的路
+- 重新规划后还是走该封闭路
+11. evidenceQuotes:
+- 导航一直让我走一条已经封闭的路
+- 重新规划后还是走这里
+12. aiInferences:
+- 可能该道路的封闭状态未及时更新到导航系统中
+- 可能需要确认道路封闭的起始时间和持续时间
+- 可能需要确认导航重新规划算法是否考虑了道路封闭数据
+13. missingInformation:
+- 具体道路名称或位置
+  - status: 未提供
+  - value: ???
+  - reason: 用于核实道路封闭数据来源
+- 用户使用的导航产品版本
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认是否为已知问题或版本回归
+- 发生时间
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断道路封闭是否在有效期内
+- 设备型号和操作系统
+  - status: 未提供
+  - value: ???
+  - reason: 用于排除设备相关因素
+14. actualResult: 导航持续推荐一条已经封闭的道路，重新规划后仍然指向同一条封闭路。
+15. expectedResult: 用户期望导航能够避开已封闭的道路，提供其他可通行的路线。
+16. severitySuggestion: S2
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 用户未提供具体道路名称、发生时间、产品版本等信息，无法确认道路封闭数据是否确实存在或已更新，也无法判断是否为导航算法未能正确读取封闭数据导致的Bug。
+19. recommendedNextAction: 建议产品经理联系用户获取具体道路名称和发生时间，核实该道路的封闭状态在数据源中是否正确，并检查路线规划算法对封闭道路的处理逻辑。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_004
+
+1. case_id: gs_v1_004
+2. ????: 从地铁站出来后定位箭头一直停在站里不动，关掉App重新打开才恢复。
+3. ??????:
+- productName: ???
+- productType: 导航与出行
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: 地铁站附近
+- additionalContext: ???
+4. ??????: 定位与轨迹
+5. ??????: 定位与轨迹
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 出地铁站后定位箭头停滞，重启恢复
+9. userScenario: 用户从地铁站出来后，使用导航或定位功能，但定位未能及时更新。
+10. userFacts:
+- 从地铁站出来后定位箭头一直停在站里不动
+- 关掉App重新打开才恢复
+11. evidenceQuotes:
+- 从地铁站出来后定位箭头一直停在站里不动，关掉App重新打开才恢复。
+12. aiInferences:
+- 可能由于地铁站内GPS信号弱导致定位停滞，App重启后重新获取了定位。需要进一步确认设备型号、系统版本以及是否在室外也有类似问题。
+13. missingInformation:
+- 设备型号
+  - status: 未提供
+  - value: ???
+  - reason: 不同设备的GPS性能差异可能影响定位表现
+- App版本
+  - status: 未提供
+  - value: ???
+  - reason: 确认是否为已知版本问题
+- 操作系统版本
+  - status: 未提供
+  - value: ???
+  - reason: 系统定位权限或API变化可能导致问题
+- 发生频率
+  - status: 未提供
+  - value: ???
+  - reason: 判断是否为偶发或可复现问题
+14. actualResult: 定位箭头停滞在地铁站内，未跟随用户移动而更新。
+15. expectedResult: 用户可能期望定位箭头能够正常更新，实时反映位置变化。
+16. severitySuggestion: S2
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 缺少设备、版本、发生频率等信息，无法确定是否为普遍问题或偶发问题。
+19. recommendedNextAction: 建议补充设备型号、App版本、系统版本以及是否可复现等信息，以便进一步定位问题。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_005
+
+1. case_id: gs_v1_005
+2. ????: 导入shp后图层能显示，但属性表里的中文全是乱码。
+3. ??????:
+- productName: ???
+- productType: GIS或地图数据平台
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: 反馈来自B端GIS平台文件导入场景。
+4. ??????: 离线地图、文件与数据管理
+5. ??????: B端平台配置与数据处理
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 导入shp后属性表中文字段显示乱码
+9. userScenario: B端GIS平台用户导入shp文件后查看属性表
+10. userFacts:
+- 用户导入了shp文件
+- 图层显示正常
+- 属性表中的中文显示为乱码
+11. evidenceQuotes:
+- 导入shp后图层能显示，但属性表里的中文全是乱码。
+12. aiInferences:
+- 乱码可能与shp文件中的dBase属性文件编码格式（如UTF-8、GBK）与平台默认编码不一致有关。
+- 平台可能在导入时未自动识别或转换编码，导致中文乱码。
+13. missingInformation:
+- shp文件的编码格式
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是数据源编码问题还是平台解析问题
+- 平台版本
+  - status: 未提供
+  - value: ???
+  - reason: 不同版本可能对编码处理不同
+- 操作系统
+  - status: 未提供
+  - value: ???
+  - reason: 操作系统影响编码默认值
+14. actualResult: 导入的shp图层可以正常显示，但属性表中的中文字段显示为乱码。
+15. expectedResult: 属性表中的中文字段应正常显示，如“名称”等字段应显示为中文而非乱码。
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 无法确认乱码的具体原因，可能为shp文件编码与平台不匹配或平台编码处理逻辑缺陷。
+19. recommendedNextAction: 建议产品经理确认shp文件的编码格式，并在测试环境中复现该问题，检查平台是否支持常见中文字符编码（如GBK、UTF-8）的自动识别与转换。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_006
+
+1. case_id: gs_v1_006
+2. ????: 航班已经延误两个小时了，页面上还是显示准点。
+3. ??????:
+- productName: ???
+- productType: 航旅信息
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 实时交通、航班与出行信息
+5. ??????: 实时交通、航班与出行信息
+6. ??????: 地图或业务数据问题
+7. ????????: 地图或业务数据问题
+8. summary: 航班延误但页面仍显示准点
+9. userScenario: 用户查看航班状态，发现实际延误两小时但页面显示准点
+10. userFacts:
+- 航班已经延误两个小时
+- 页面上仍显示准点
+11. evidenceQuotes:
+- 航班已经延误两个小时了，页面上还是显示准点。
+12. aiInferences:
+- 可能航班数据源未及时更新延误信息
+- 可能与页面数据刷新机制有关，需要进一步确认
+13. missingInformation:
+- 具体航班号或航线
+  - status: 未提供
+  - value: ???
+  - reason: 用于核查数据源中该航班的实际状态
+- 发生时间
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断数据更新延迟的具体时长
+- 产品版本
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认是否已知版本问题
+14. actualResult: 页面显示航班准点，但实际已经延误两小时
+15. expectedResult: 页面应显示航班延误状态
+16. severitySuggestion: S3
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 无法确定是数据源更新延迟还是客户端缓存或显示逻辑问题，需进一步确认数据源刷新机制和具体航班状态
+19. recommendedNextAction: 建议产品经理确认该航班数据源是否提供了实时延误信息，并检查页面数据刷新逻辑
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_007
+
+1. case_id: gs_v1_007
+2. ????: 我收藏的几个地点换了新手机登录后都不见了，账号还是同一个。
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: 新手机，具体型号未提供
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 账号、收藏与数据同步
+5. ??????: 账号、收藏与数据同步
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 换新手机登录后收藏地点丢失
+9. userScenario: 用户更换新手机后，使用同一账号登录，发现之前收藏的地点不见了
+10. userFacts:
+- 用户换了新手机
+- 用户登录了同一个账号
+- 收藏的几个地点不见了
+11. evidenceQuotes:
+- 我收藏的几个地点换了新手机登录后都不见了，账号还是同一个。
+12. aiInferences:
+- 用户可能在旧手机上的收藏数据没有同步到云端
+- 可能与账号同步机制或数据迁移流程有关
+- 需要进一步确认用户是否在旧手机上启用了云同步
+13. missingInformation:
+- 旧手机上收藏地点是否还存在
+  - status: 未提供
+  - value: ???
+  - reason: 判断数据是否在云端丢失或仅未同步到新手机
+- 用户是否在旧手机上手动触发过同步
+  - status: 未提供
+  - value: ???
+  - reason: 确认同步功能是否正常触发
+- 新手机网络连接状态
+  - status: 未提供
+  - value: ???
+  - reason: 排除网络问题导致数据未加载
+- 用户账号类型是否为同一个平台
+  - status: 未提供
+  - value: ???
+  - reason: 排除跨平台账号不一致
+14. actualResult: 用户在新手机上登录同一账号，收藏的地点不见了
+15. expectedResult: 用户期望收藏地点能跨设备同步到新手机
+16. severitySuggestion: S3
+17. prioritySuggestion: P2
+18. uncertainty: 反馈未明确说明旧手机上数据是否丢失，也未提供是否手动同步、网络状态等信息，无法确定是数据丢失还是同步未完成。
+19. recommendedNextAction: 建议产品经理确认用户旧手机上收藏是否还存在，并指导用户检查账号同步设置及网络状态；同时排查后台同步日志。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_008
+
+1. case_id: gs_v1_008
+2. ????: 在后台发布新的矢量瓦片服务后，前台图层列表里一直看不到这个服务。
+3. ??????:
+- productName: ???
+- productType: GIS或地图数据平台
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: B端平台配置与服务发布场景。
+4. ??????: B端平台配置与数据处理
+5. ??????: B端平台配置与数据处理
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 后台发布矢量瓦片服务后前台图层列表不更新
+9. userScenario: 用户作为B端平台管理员发布矢量瓦片服务后，在前台查看图层列表无法找到新服务
+10. userFacts:
+- 用户描述了在后台发布了新的矢量瓦片服务
+- 用户描述了前台图层列表里一直看不到这个服务
+11. evidenceQuotes:
+- 在后台发布新的矢量瓦片服务后，前台图层列表里一直看不到这个服务。
+12. aiInferences:
+- 可能与前后台数据同步延迟有关
+- 可能与缓存机制有关，需要进一步确认
+- 可能与服务发布流程未完全完成有关，需要进一步确认
+13. missingInformation:
+- 后台发布操作是否成功或是否有报错
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认发布流程是否正常完成
+- 前台图层列表是否有手动刷新或数据自动更新机制
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是否只是显示未刷新
+- 服务状态（如发布中、已发布、失败）
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断服务是否实际可用
+- 其他用户或该用户之前发布的服务是否正常显示
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是偶发问题还是系统性问题
+14. actualResult: 用户在前台图层列表中一直看不到新发布的矢量瓦片服务
+15. expectedResult: 新发布的矢量瓦片服务应该出现在前台图层列表中
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 用户未提供后台发布是否成功、前台是否执行了刷新操作、以及其他服务是否正常等关键信息，无法确定是发布流程问题、数据同步问题还是显示问题。
+19. recommendedNextAction: 建议产品经理联系用户确认后台发布操作的具体结果（是否有成功提示或错误日志），以及前台是否有手动刷新按钮或是否尝试过刷新页面；同时检查该用户账号的权限是否正常。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_009
+
+1. case_id: gs_v1_009
+2. ????: 能不能在骑行路线里加一个尽量少爬坡的选项？现在推荐的路坡太多了。
+3. ??????:
+- productName: ???
+- productType: 导航与出行
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 路线规划与导航
+5. ??????: 路线规划与导航
+6. ??????: 产品需求
+7. ????????: 产品需求
+8. summary: 建议骑行路线增加少爬坡选项
+9. userScenario: 用户在骑行导航时，希望路线能避免过多爬坡
+10. userFacts:
+- 用户骑行
+- 当前推荐的路坡太多
+11. evidenceQuotes:
+- 能不能在骑行路线里加一个尽量少爬坡的选项？
+- 现在推荐的路坡太多了。
+12. aiInferences:
+- 用户可能希望骑行更轻松，避免陡坡路段
+- 可能需要根据用户偏好优化路线算法
+13. missingInformation:
+- 用户设备信息
+  - status: 未提供
+  - value: ???
+  - reason: 可能影响功能兼容性
+- 发生地点
+  - status: 未提供
+  - value: ???
+  - reason: 不同地区道路坡度数据可能不同
+- 发生频率
+  - status: 未提供
+  - value: ???
+  - reason: 判断问题普遍性
+14. actualResult: 当前推荐的路坡太多
+15. expectedResult: 用户可能期望增加一个尽量少爬坡的路线选项
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 无法确认用户使用的具体产品版本、设备型号以及该功能是否已经在规划中
+19. recommendedNextAction: 建议产品经理评估是否已有类似需求或排期，并补充用户场景细节
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_010
+
+1. case_id: gs_v1_010
+2. ????: 离线地图下载完成后，我断网打开还是看不到城市地图。
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 离线地图、文件与数据管理
+5. ??????: 离线地图、文件与数据管理
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 离线地图下载后断网无法显示
+9. userScenario: 用户在离线地图下载完成后，断网状态下尝试查看城市地图但无法显示
+10. userFacts:
+- 用户已完成离线地图下载
+- 断网后打开App看不到城市地图
+11. evidenceQuotes:
+- 离线地图下载完成后，我断网打开还是看不到城市地图。
+12. aiInferences:
+- 可能离线地图数据未正确存储或加载
+- 可能与特定的城市或地图版本有关
+- 可能需要确认是否重启过App或设备
+13. missingInformation:
+- 设备型号
+  - status: 未提供
+  - value: ???
+  - reason: 不同设备可能存在兼容性问题
+- App版本
+  - status: 未提供
+  - value: ???
+  - reason: 不同版本可能存在已知Bug
+- 下载的具体城市
+  - status: 未提供
+  - value: ???
+  - reason: 确认是否特定城市的数据问题
+- 是否重启过App或设备
+  - status: 未提供
+  - value: ???
+  - reason: 确认是否临时加载问题
+- 下载后的操作步骤
+  - status: 未提供
+  - value: ???
+  - reason: 复现问题的关键步骤
+14. actualResult: 离线地图下载完成后，断网打开App看不到城市地图
+15. expectedResult: 断网状态下应能正常显示已下载的离线地图
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 当前反馈缺少设备型号、App版本、下载城市等关键信息，无法确定是通用Bug还是特定数据问题
+19. recommendedNextAction: 建议产品经理补充收集设备型号、App版本、下载城市信息，并确认用户是否重启过App或设备，尝试复现问题
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_011
+
+1. case_id: gs_v1_011
+2. ????: 我想把等高线和卫星图一起显示，这个在哪里开？
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 地图展示与图层
+5. ??????: 地图展示与图层
+6. ??????: 使用咨询或操作问题
+7. ????????: 使用咨询或操作问题
+8. summary: 用户询问等高线与卫星图叠加显示的方法
+9. userScenario: 用户在地图App中尝试同时显示等高线和卫星图，未找到开启入口
+10. userFacts:
+- 用户想将等高线和卫星图一起显示
+- 用户询问该功能在哪里开启
+11. evidenceQuotes:
+- 我想把等高线和卫星图一起显示，这个在哪里开？
+12. aiInferences:
+- 用户可能未在图层切换或地图样式设置中找到相关选项
+- 该功能可能需要在地图App的‘图层’或‘地图样式’菜单中开启
+13. missingInformation:
+- app版本
+  - status: 未提供
+  - value: ???
+  - reason: 不同版本的功能入口可能存在差异
+- 设备型号
+  - status: 未提供
+  - value: ???
+  - reason: 设备类型可能影响界面布局
+- 用户已尝试的操作
+  - status: 未提供
+  - value: ???
+  - reason: 了解用户已尝试的路径，避免重复建议
+14. actualResult: 用户未找到开启等高线与卫星图同时显示的位置
+15. expectedResult: 用户可能期望在图层设置中找到该功能开关
+16. severitySuggestion: S4
+17. prioritySuggestion: P3
+18. uncertainty: 用户未提供具体地图App名称和版本，无法确认功能是否确实存在及入口位置
+19. recommendedNextAction: 产品经理可确认该地图App是否支持等高线与卫星图叠加功能，并整理操作指引或优化界面入口
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_012
+
+1. case_id: gs_v1_012
+2. ????: 定位又不准了。
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 定位与轨迹
+5. ??????: 其他或无法判断
+6. ??????: 信息不足，暂时无法判断
+7. ????????: 信息不足，暂时无法判断
+8. summary: 用户反馈定位不准，信息不足
+9. userScenario: 当前反馈未明确说明用户场景，待补充。
+10. userFacts:
+- 定位又不准了
+11. evidenceQuotes:
+- 定位又不准了
+12. aiInferences:
+- 用户可能在使用地图App时发现当前位置显示不准确，可能与GPS信号、网络定位或地图数据有关。
+- 需要进一步确认定位不准的具体表现（如位置偏移、无法定位、定位缓慢等）。
+13. missingInformation:
+- 具体现象描述
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是定位精度不足、定位失败还是偏移等。
+- 设备型号与操作系统
+  - status: 未提供
+  - value: ???
+  - reason: 定位问题可能与设备硬件或系统定位服务有关。
+- App版本
+  - status: 未提供
+  - value: ???
+  - reason: 不同版本可能存在已知定位问题。
+- 发生时间与地点
+  - status: 未提供
+  - value: ???
+  - reason: 用于排查是否有区域性信号问题或特定场景。
+- 网络环境
+  - status: 未提供
+  - value: ???
+  - reason: 定位可能依赖网络辅助。
+14. actualResult: 当前反馈未明确说明实际结果，待补充。
+15. expectedResult: 当前反馈未明确说明预期结果，待产品经理确认。
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 用户反馈仅一句话，未提供具体现象、设备、版本、环境等信息，无法判断是软件Bug、数据问题还是用户操作相关。
+19. recommendedNextAction: 建议产品经理联系用户补充具体定位不准的表现、设备型号、App版本、发生地点和网络环境等信息。
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_013
+
+1. case_id: gs_v1_013
+2. ????: 公交车还有两站才到，但地图上显示已经到站了。
+3. ??????:
+- productName: ???
+- productType: 智能交通
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 实时交通、航班与出行信息
+5. ??????: 实时交通、航班与出行信息
+6. ??????: 地图或业务数据问题
+7. ????????: 地图或业务数据问题
+8. summary: 公交实时到站信息与实际位置不符
+9. userScenario: 用户正在查看公交实时到站信息，发现地图显示的公交车位置与实际进度不一致
+10. userFacts:
+- 公交车还有两站才到，但地图上显示已经到站了
+11. evidenceQuotes:
+- 公交车还有两站才到，但地图上显示已经到站了
+12. aiInferences:
+- 可能与实时公交数据更新延迟或定位偏差有关，需要进一步确认
+13. missingInformation:
+- 公交线路或车辆编号
+  - status: 未提供
+  - value: ???
+  - reason: 用于定位具体的数据源或线路
+- 发生时间和地点
+  - status: 未提供
+  - value: ???
+  - reason: 用于复现和排查数据时效性
+- 设备型号与应用版本
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认是否为客户端特定问题
+- 是否多次出现
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是偶发还是系统性问题
+14. actualResult: 地图显示公交车已经到站，但用户指出公交车还有两站才到
+15. expectedResult: 地图应准确显示公交车的实际位置，即还有两站到达
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 无法确认是数据源问题还是定位Bug，也不清楚影响范围，需要更多信息
+19. recommendedNextAction: 建议产品经理补充公交线路、时间地点等详细信息，并联系数据提供方核实实时公交数据准确性，同时尝试复现问题
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_014
+
+1. case_id: gs_v1_014
+2. ????: 轨迹记录结束后导出的GPX文件没有最后五分钟的路线。
+3. ??????:
+- productName: ???
+- productType: 导航与出行
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: ???
+- additionalContext: ???
+4. ??????: 定位与轨迹
+5. ??????: 定位与轨迹
+6. ??????: Bug
+7. ????????: Bug
+8. summary: 导出的GPX文件缺失最后五分钟轨迹
+9. userScenario: 用户使用轨迹记录功能后导出GPX文件，发现文件不完整
+10. userFacts:
+- 轨迹记录结束后导出的GPX文件没有最后五分钟的路线
+11. evidenceQuotes:
+- 轨迹记录结束后导出的GPX文件没有最后五分钟的路线
+12. aiInferences:
+- 可能与轨迹记录结束时的数据保存逻辑有关
+- 可能与导出时的数据截断或同步延迟有关
+13. missingInformation:
+- 设备型号与操作系统
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认是否与特定设备或系统相关
+- App版本
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认是否为已知版本问题
+- 轨迹记录的具体时长和结束方式
+  - status: 未提供
+  - value: ???
+  - reason: 用于判断是否与记录时长或手动停止有关
+- 是否可复现
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认问题稳定性和影响范围
+14. actualResult: 导出的GPX文件缺少最后五分钟的路线数据
+15. expectedResult: 导出的GPX文件应包含完整记录的轨迹数据
+16. severitySuggestion: 待人工判断
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 缺少环境信息和复现信息，无法确认是否为偶发问题或特定条件触发
+19. recommendedNextAction: 建议补充设备、系统、App版本信息，并尝试复现问题，确认是否每次导出都缺失最后五分钟数据
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:
+
+## gs_v1_015
+
+1. case_id: gs_v1_015
+2. ????: 搜索公司楼下的充电站，结果里有一个已经拆掉的站点，还显示可用。
+3. ??????:
+- productName: ???
+- productType: 地图App
+- deviceInfo: ???
+- appVersion: ???
+- occurredAt: ???
+- location: 公司楼下，具体地址未提供
+- additionalContext: ???
+4. ??????: 搜索与POI
+5. ??????: 搜索与POI
+6. ??????: 地图或业务数据问题
+7. ????????: 地图或业务数据问题
+8. summary: 搜索结果显示已拆除充电站可用
+9. userScenario: 用户在公司楼下搜索充电站
+10. userFacts:
+- 搜索公司楼下的充电站
+- 结果中有一个已经拆掉的站点
+- 还显示可用
+11. evidenceQuotes:
+- 搜索公司楼下的充电站，结果里有一个已经拆掉的站点，还显示可用。
+12. aiInferences:
+- 该POI数据可能未及时更新，需要进一步确认
+13. missingInformation:
+- 具体位置信息
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认POI数据范围
+- app版本
+  - status: 未提供
+  - value: ???
+  - reason: 用于确认问题是否已在后续版本修复
+14. actualResult: 搜索结果中有一个已拆掉的充电站仍显示可用
+15. expectedResult: 已拆除的充电站不应显示或应标记为不可用
+16. severitySuggestion: S3
+17. prioritySuggestion: 待人工判断
+18. uncertainty: 无法确认该充电站拆除时间及数据更新延迟原因
+19. recommendedNextAction: 建议产品经理核实该充电站POI数据来源，并确认是否已从数据源中移除或标记
+20. ????????:
+
+- ????????:
+- userFacts?????????:
+- evidenceQuotes??????????:
+- AI?????????????:
+- ?????????:
+- modified_field_count:
+- ????:

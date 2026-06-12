@@ -1,0 +1,67 @@
+[
+  {
+    "case_id": "gs_v1_001",
+    "feedbackText": "这个商场已经改名半年了，地图上还是显示旧名字，搜索新名字也搜不到。",
+    "expectedProductModule": "搜索与POI",
+    "expectedIssueType": "地图或业务数据问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "8.701",
+    "success": true,
+    "diagnosis": {
+      "summary": "商场改名半年地图仍显示旧名，搜索新名无结果。",
+      "userScenario": "用户在地图App中搜索商场并查看名称，发现数据未更新。",
+      "productModule": "搜索与POI",
+      "issueType": "地图或业务数据问题",
+      "alternativeIssueType": "无",
+      "actualResult": "地图上显示商场的旧名字，搜索新名字也无法找到该商场。",
+      "expectedResult": "地图应显示商场的新名字，且搜索新名字能够正常找到该商场。",
+      "severitySuggestion": "S3",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "高",
+      "userFacts": [
+        "商场已经改名半年了",
+        "地图上还是显示旧名字",
+        "搜索新名字也搜不到"
+      ],
+      "aiInferences": [
+        "该商场的POI数据可能未及时更新，可能与数据源的同步周期有关。"
+      ],
+      "evidenceQuotes": [
+        "这个商场已经改名半年了，地图上还是显示旧名字",
+        "搜索新名字也搜不到"
+      ],
+      "missingInformation": [
+        {
+          "field": "商场具体名称（旧名和新名）",
+          "reason": "用于定位具体POI数据并推动更新。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "商场所在城市或具体位置",
+          "reason": "用于确认数据覆盖范围。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "搜索时使用的关键词",
+          "reason": "用于复现搜索问题。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "地图App的具体版本号",
+          "reason": "用于判断是否为版本特定问题。",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "用户未提供商场旧名和新名，无法直接定位数据问题；是否所有用户均受影响尚不明确。",
+      "recommendedNextAction": "请联系用户获取商场旧名和新名，核实数据源是否已更新，并推动POI数据刷新流程。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  }
+]

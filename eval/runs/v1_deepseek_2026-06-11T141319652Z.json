@@ -1,0 +1,938 @@
+[
+  {
+    "case_id": "gs_v1_001",
+    "feedbackText": "这个商场已经改名半年了，地图上还是显示旧名字，搜索新名字也搜不到。",
+    "expectedProductModule": "搜索与POI",
+    "expectedIssueType": "地图或业务数据问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "6.238",
+    "success": true,
+    "diagnosis": {
+      "summary": "商场改名半年后地图仍显示旧名且新名搜索不到",
+      "userScenario": "用户在地图App中搜索已改名的商场，希望找到新名称的POI",
+      "productModule": "搜索与POI",
+      "issueType": "地图或业务数据问题",
+      "alternativeIssueType": "无",
+      "actualResult": "用户反馈地图上仍显示商场旧名字，搜索新名字也搜不到。",
+      "expectedResult": "用户可能期望地图显示商场新名字，且通过新名字能搜索到该地点。",
+      "severitySuggestion": "S3",
+      "prioritySuggestion": "P1",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "商场已经改名半年",
+        "地图上还是显示旧名字",
+        "搜索新名字也搜不到"
+      ],
+      "aiInferences": [
+        "可能该商场的POI数据未及时更新，需要进一步确认数据源更新周期。"
+      ],
+      "evidenceQuotes": [
+        "这个商场已经改名半年了，地图上还是显示旧名字，搜索新名字也搜不到。"
+      ],
+      "missingInformation": [
+        {
+          "field": "具体商场名称",
+          "reason": "用于定位具体POI数据问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "地图App产品名称",
+          "reason": "确认产品归属以便数据修复",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "用户所在城市",
+          "reason": "确认数据更新区域",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "用户未提供具体商场名称和产品名称，无法确认数据更新问题是否已上报或存在其他原因。",
+      "recommendedNextAction": "建议产品经理联系数据运营确认该商场的POI数据状态，并补充用户具体位置信息以核实。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_002",
+    "feedbackText": "打开地图后道路和建筑都显示正常，但公交站图层突然全部不显示了，切换缩放也没用。",
+    "expectedProductModule": "地图展示与图层",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "7.930",
+    "success": true,
+    "diagnosis": {
+      "summary": "公交站图层突然全部不显示",
+      "userScenario": "用户打开地图查看公交站信息",
+      "productModule": "地图展示与图层",
+      "issueType": "Bug",
+      "alternativeIssueType": "地图或业务数据问题",
+      "actualResult": "地图上道路和建筑正常显示，但公交站图层全部不显示，切换缩放无效。",
+      "expectedResult": "公交站图层应正常显示。",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "打开地图后道路和建筑都显示正常",
+        "公交站图层突然全部不显示",
+        "切换缩放也没用"
+      ],
+      "aiInferences": [
+        "可能与图层开关、数据加载或网络请求有关",
+        "需要进一步确认是否仅限特定区域或用户"
+      ],
+      "evidenceQuotes": [
+        "打开地图后道路和建筑都显示正常，但公交站图层突然全部不显示",
+        "切换缩放也没用"
+      ],
+      "missingInformation": [
+        {
+          "field": "设备型号与操作系统",
+          "reason": "用于判断是否与设备兼容性有关",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "App版本",
+          "reason": "用于判断是否为已知版本问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生地点与时间",
+          "reason": "用于判断是否与区域数据或时段有关",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "问题出现前是否进行过操作（如切换图层、更新数据）",
+          "reason": "用于判断触发条件",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "当前无法确定是客户端渲染Bug还是后端数据问题，需补充更多信息。",
+      "recommendedNextAction": "建议用户提供设备型号、App版本、发生地点和截图，并尝试重启App或清除缓存；同时检查图层开关设置。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_003",
+    "feedbackText": "开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。",
+    "expectedProductModule": "路线规划与导航",
+    "expectedIssueType": "地图或业务数据问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "10.721",
+    "success": true,
+    "diagnosis": {
+      "summary": "导航持续推荐已封闭道路",
+      "userScenario": "用户开车前往机场，使用导航时遇到已封闭道路仍被规划",
+      "productModule": "路线规划与导航",
+      "issueType": "地图或业务数据问题",
+      "alternativeIssueType": "Bug",
+      "actualResult": "导航持续推荐一条已经封闭的道路，重新规划后仍然指向同一条封闭路。",
+      "expectedResult": "用户期望导航能够避开已封闭的道路，提供其他可通行的路线。",
+      "severitySuggestion": "S2",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "用户开车去机场",
+        "导航一直让用户走一条已经封闭的路",
+        "重新规划后还是走该封闭路"
+      ],
+      "aiInferences": [
+        "可能该道路的封闭状态未及时更新到导航系统中",
+        "可能需要确认道路封闭的起始时间和持续时间",
+        "可能需要确认导航重新规划算法是否考虑了道路封闭数据"
+      ],
+      "evidenceQuotes": [
+        "导航一直让我走一条已经封闭的路",
+        "重新规划后还是走这里"
+      ],
+      "missingInformation": [
+        {
+          "field": "具体道路名称或位置",
+          "reason": "用于核实道路封闭数据来源",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "用户使用的导航产品版本",
+          "reason": "用于确认是否为已知问题或版本回归",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生时间",
+          "reason": "用于判断道路封闭是否在有效期内",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "设备型号和操作系统",
+          "reason": "用于排除设备相关因素",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "用户未提供具体道路名称、发生时间、产品版本等信息，无法确认道路封闭数据是否确实存在或已更新，也无法判断是否为导航算法未能正确读取封闭数据导致的Bug。",
+      "recommendedNextAction": "建议产品经理联系用户获取具体道路名称和发生时间，核实该道路的封闭状态在数据源中是否正确，并检查路线规划算法对封闭道路的处理逻辑。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_004",
+    "feedbackText": "从地铁站出来后定位箭头一直停在站里不动，关掉App重新打开才恢复。",
+    "expectedProductModule": "定位与轨迹",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "11.414",
+    "success": true,
+    "diagnosis": {
+      "summary": "出地铁站后定位箭头停滞，重启恢复",
+      "userScenario": "用户从地铁站出来后，使用导航或定位功能，但定位未能及时更新。",
+      "productModule": "定位与轨迹",
+      "issueType": "Bug",
+      "alternativeIssueType": "无",
+      "actualResult": "定位箭头停滞在地铁站内，未跟随用户移动而更新。",
+      "expectedResult": "用户可能期望定位箭头能够正常更新，实时反映位置变化。",
+      "severitySuggestion": "S2",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "从地铁站出来后定位箭头一直停在站里不动",
+        "关掉App重新打开才恢复"
+      ],
+      "aiInferences": [
+        "可能由于地铁站内GPS信号弱导致定位停滞，App重启后重新获取了定位。需要进一步确认设备型号、系统版本以及是否在室外也有类似问题。"
+      ],
+      "evidenceQuotes": [
+        "从地铁站出来后定位箭头一直停在站里不动，关掉App重新打开才恢复。"
+      ],
+      "missingInformation": [
+        {
+          "field": "设备型号",
+          "reason": "不同设备的GPS性能差异可能影响定位表现",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "App版本",
+          "reason": "确认是否为已知版本问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "操作系统版本",
+          "reason": "系统定位权限或API变化可能导致问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生频率",
+          "reason": "判断是否为偶发或可复现问题",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "缺少设备、版本、发生频率等信息，无法确定是否为普遍问题或偶发问题。",
+      "recommendedNextAction": "建议补充设备型号、App版本、系统版本以及是否可复现等信息，以便进一步定位问题。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_005",
+    "feedbackText": "导入shp后图层能显示，但属性表里的中文全是乱码。",
+    "expectedProductModule": "离线地图、文件与数据管理",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "9.298",
+    "success": true,
+    "diagnosis": {
+      "summary": "导入shp后属性表中文字段显示乱码",
+      "userScenario": "B端GIS平台用户导入shp文件后查看属性表",
+      "productModule": "B端平台配置与数据处理",
+      "issueType": "Bug",
+      "alternativeIssueType": "地图或业务数据问题",
+      "actualResult": "导入的shp图层可以正常显示，但属性表中的中文字段显示为乱码。",
+      "expectedResult": "属性表中的中文字段应正常显示，如“名称”等字段应显示为中文而非乱码。",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "用户导入了shp文件",
+        "图层显示正常",
+        "属性表中的中文显示为乱码"
+      ],
+      "aiInferences": [
+        "乱码可能与shp文件中的dBase属性文件编码格式（如UTF-8、GBK）与平台默认编码不一致有关。",
+        "平台可能在导入时未自动识别或转换编码，导致中文乱码。"
+      ],
+      "evidenceQuotes": [
+        "导入shp后图层能显示，但属性表里的中文全是乱码。"
+      ],
+      "missingInformation": [
+        {
+          "field": "shp文件的编码格式",
+          "reason": "用于判断是数据源编码问题还是平台解析问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "平台版本",
+          "reason": "不同版本可能对编码处理不同",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "操作系统",
+          "reason": "操作系统影响编码默认值",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "无法确认乱码的具体原因，可能为shp文件编码与平台不匹配或平台编码处理逻辑缺陷。",
+      "recommendedNextAction": "建议产品经理确认shp文件的编码格式，并在测试环境中复现该问题，检查平台是否支持常见中文字符编码（如GBK、UTF-8）的自动识别与转换。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_006",
+    "feedbackText": "航班已经延误两个小时了，页面上还是显示准点。",
+    "expectedProductModule": "实时交通、航班与出行信息",
+    "expectedIssueType": "地图或业务数据问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "7.919",
+    "success": true,
+    "diagnosis": {
+      "summary": "航班延误但页面仍显示准点",
+      "userScenario": "用户查看航班状态，发现实际延误两小时但页面显示准点",
+      "productModule": "实时交通、航班与出行信息",
+      "issueType": "地图或业务数据问题",
+      "alternativeIssueType": "Bug",
+      "actualResult": "页面显示航班准点，但实际已经延误两小时",
+      "expectedResult": "页面应显示航班延误状态",
+      "severitySuggestion": "S3",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "航班已经延误两个小时",
+        "页面上仍显示准点"
+      ],
+      "aiInferences": [
+        "可能航班数据源未及时更新延误信息",
+        "可能与页面数据刷新机制有关，需要进一步确认"
+      ],
+      "evidenceQuotes": [
+        "航班已经延误两个小时了，页面上还是显示准点。"
+      ],
+      "missingInformation": [
+        {
+          "field": "具体航班号或航线",
+          "reason": "用于核查数据源中该航班的实际状态",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生时间",
+          "reason": "用于判断数据更新延迟的具体时长",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "产品版本",
+          "reason": "用于确认是否已知版本问题",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "无法确定是数据源更新延迟还是客户端缓存或显示逻辑问题，需进一步确认数据源刷新机制和具体航班状态",
+      "recommendedNextAction": "建议产品经理确认该航班数据源是否提供了实时延误信息，并检查页面数据刷新逻辑",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_007",
+    "feedbackText": "我收藏的几个地点换了新手机登录后都不见了，账号还是同一个。",
+    "expectedProductModule": "账号、收藏与数据同步",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "9.198",
+    "success": true,
+    "diagnosis": {
+      "summary": "换新手机登录后收藏地点丢失",
+      "userScenario": "用户更换新手机后，使用同一账号登录，发现之前收藏的地点不见了",
+      "productModule": "账号、收藏与数据同步",
+      "issueType": "Bug",
+      "alternativeIssueType": "产品需求",
+      "actualResult": "用户在新手机上登录同一账号，收藏的地点不见了",
+      "expectedResult": "用户期望收藏地点能跨设备同步到新手机",
+      "severitySuggestion": "S3",
+      "prioritySuggestion": "P2",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "用户换了新手机",
+        "用户登录了同一个账号",
+        "收藏的几个地点不见了"
+      ],
+      "aiInferences": [
+        "用户可能在旧手机上的收藏数据没有同步到云端",
+        "可能与账号同步机制或数据迁移流程有关",
+        "需要进一步确认用户是否在旧手机上启用了云同步"
+      ],
+      "evidenceQuotes": [
+        "我收藏的几个地点换了新手机登录后都不见了，账号还是同一个。"
+      ],
+      "missingInformation": [
+        {
+          "field": "旧手机上收藏地点是否还存在",
+          "reason": "判断数据是否在云端丢失或仅未同步到新手机",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "用户是否在旧手机上手动触发过同步",
+          "reason": "确认同步功能是否正常触发",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "新手机网络连接状态",
+          "reason": "排除网络问题导致数据未加载",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "用户账号类型是否为同一个平台",
+          "reason": "排除跨平台账号不一致",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "反馈未明确说明旧手机上数据是否丢失，也未提供是否手动同步、网络状态等信息，无法确定是数据丢失还是同步未完成。",
+      "recommendedNextAction": "建议产品经理确认用户旧手机上收藏是否还存在，并指导用户检查账号同步设置及网络状态；同时排查后台同步日志。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_008",
+    "feedbackText": "在后台发布新的矢量瓦片服务后，前台图层列表里一直看不到这个服务。",
+    "expectedProductModule": "B端平台配置与数据处理",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "11.202",
+    "success": true,
+    "diagnosis": {
+      "summary": "后台发布矢量瓦片服务后前台图层列表不更新",
+      "userScenario": "用户作为B端平台管理员发布矢量瓦片服务后，在前台查看图层列表无法找到新服务",
+      "productModule": "B端平台配置与数据处理",
+      "issueType": "Bug",
+      "alternativeIssueType": "地图或业务数据问题",
+      "actualResult": "用户在前台图层列表中一直看不到新发布的矢量瓦片服务",
+      "expectedResult": "新发布的矢量瓦片服务应该出现在前台图层列表中",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "用户描述了在后台发布了新的矢量瓦片服务",
+        "用户描述了前台图层列表里一直看不到这个服务"
+      ],
+      "aiInferences": [
+        "可能与前后台数据同步延迟有关",
+        "可能与缓存机制有关，需要进一步确认",
+        "可能与服务发布流程未完全完成有关，需要进一步确认"
+      ],
+      "evidenceQuotes": [
+        "在后台发布新的矢量瓦片服务后，前台图层列表里一直看不到这个服务。"
+      ],
+      "missingInformation": [
+        {
+          "field": "后台发布操作是否成功或是否有报错",
+          "reason": "用于确认发布流程是否正常完成",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "前台图层列表是否有手动刷新或数据自动更新机制",
+          "reason": "用于判断是否只是显示未刷新",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "服务状态（如发布中、已发布、失败）",
+          "reason": "用于判断服务是否实际可用",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "其他用户或该用户之前发布的服务是否正常显示",
+          "reason": "用于判断是偶发问题还是系统性问题",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "用户未提供后台发布是否成功、前台是否执行了刷新操作、以及其他服务是否正常等关键信息，无法确定是发布流程问题、数据同步问题还是显示问题。",
+      "recommendedNextAction": "建议产品经理联系用户确认后台发布操作的具体结果（是否有成功提示或错误日志），以及前台是否有手动刷新按钮或是否尝试过刷新页面；同时检查该用户账号的权限是否正常。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_009",
+    "feedbackText": "能不能在骑行路线里加一个尽量少爬坡的选项？现在推荐的路坡太多了。",
+    "expectedProductModule": "路线规划与导航",
+    "expectedIssueType": "产品需求",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "5.684",
+    "success": true,
+    "diagnosis": {
+      "summary": "建议骑行路线增加少爬坡选项",
+      "userScenario": "用户在骑行导航时，希望路线能避免过多爬坡",
+      "productModule": "路线规划与导航",
+      "issueType": "产品需求",
+      "alternativeIssueType": "无",
+      "actualResult": "当前推荐的路坡太多",
+      "expectedResult": "用户可能期望增加一个尽量少爬坡的路线选项",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "高",
+      "userFacts": [
+        "用户骑行",
+        "当前推荐的路坡太多"
+      ],
+      "aiInferences": [
+        "用户可能希望骑行更轻松，避免陡坡路段",
+        "可能需要根据用户偏好优化路线算法"
+      ],
+      "evidenceQuotes": [
+        "能不能在骑行路线里加一个尽量少爬坡的选项？",
+        "现在推荐的路坡太多了。"
+      ],
+      "missingInformation": [
+        {
+          "field": "用户设备信息",
+          "reason": "可能影响功能兼容性",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生地点",
+          "reason": "不同地区道路坡度数据可能不同",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生频率",
+          "reason": "判断问题普遍性",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "无法确认用户使用的具体产品版本、设备型号以及该功能是否已经在规划中",
+      "recommendedNextAction": "建议产品经理评估是否已有类似需求或排期，并补充用户场景细节",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_010",
+    "feedbackText": "离线地图下载完成后，我断网打开还是看不到城市地图。",
+    "expectedProductModule": "离线地图、文件与数据管理",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "7.570",
+    "success": true,
+    "diagnosis": {
+      "summary": "离线地图下载后断网无法显示",
+      "userScenario": "用户在离线地图下载完成后，断网状态下尝试查看城市地图但无法显示",
+      "productModule": "离线地图、文件与数据管理",
+      "issueType": "Bug",
+      "alternativeIssueType": "地图或业务数据问题",
+      "actualResult": "离线地图下载完成后，断网打开App看不到城市地图",
+      "expectedResult": "断网状态下应能正常显示已下载的离线地图",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "用户已完成离线地图下载",
+        "断网后打开App看不到城市地图"
+      ],
+      "aiInferences": [
+        "可能离线地图数据未正确存储或加载",
+        "可能与特定的城市或地图版本有关",
+        "可能需要确认是否重启过App或设备"
+      ],
+      "evidenceQuotes": [
+        "离线地图下载完成后，我断网打开还是看不到城市地图。"
+      ],
+      "missingInformation": [
+        {
+          "field": "设备型号",
+          "reason": "不同设备可能存在兼容性问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "App版本",
+          "reason": "不同版本可能存在已知Bug",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "下载的具体城市",
+          "reason": "确认是否特定城市的数据问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "是否重启过App或设备",
+          "reason": "确认是否临时加载问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "下载后的操作步骤",
+          "reason": "复现问题的关键步骤",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "当前反馈缺少设备型号、App版本、下载城市等关键信息，无法确定是通用Bug还是特定数据问题",
+      "recommendedNextAction": "建议产品经理补充收集设备型号、App版本、下载城市信息，并确认用户是否重启过App或设备，尝试复现问题",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_011",
+    "feedbackText": "我想把等高线和卫星图一起显示，这个在哪里开？",
+    "expectedProductModule": "地图展示与图层",
+    "expectedIssueType": "使用咨询或操作问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "7.264",
+    "success": true,
+    "diagnosis": {
+      "summary": "用户询问等高线与卫星图叠加显示的方法",
+      "userScenario": "用户在地图App中尝试同时显示等高线和卫星图，未找到开启入口",
+      "productModule": "地图展示与图层",
+      "issueType": "使用咨询或操作问题",
+      "alternativeIssueType": "无",
+      "actualResult": "用户未找到开启等高线与卫星图同时显示的位置",
+      "expectedResult": "用户可能期望在图层设置中找到该功能开关",
+      "severitySuggestion": "S4",
+      "prioritySuggestion": "P3",
+      "confidenceLevel": "高",
+      "userFacts": [
+        "用户想将等高线和卫星图一起显示",
+        "用户询问该功能在哪里开启"
+      ],
+      "aiInferences": [
+        "用户可能未在图层切换或地图样式设置中找到相关选项",
+        "该功能可能需要在地图App的‘图层’或‘地图样式’菜单中开启"
+      ],
+      "evidenceQuotes": [
+        "我想把等高线和卫星图一起显示，这个在哪里开？"
+      ],
+      "missingInformation": [
+        {
+          "field": "app版本",
+          "reason": "不同版本的功能入口可能存在差异",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "设备型号",
+          "reason": "设备类型可能影响界面布局",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "用户已尝试的操作",
+          "reason": "了解用户已尝试的路径，避免重复建议",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "用户未提供具体地图App名称和版本，无法确认功能是否确实存在及入口位置",
+      "recommendedNextAction": "产品经理可确认该地图App是否支持等高线与卫星图叠加功能，并整理操作指引或优化界面入口",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_012",
+    "feedbackText": "定位又不准了。",
+    "expectedProductModule": "定位与轨迹",
+    "expectedIssueType": "信息不足，暂时无法判断",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "9.167",
+    "success": true,
+    "diagnosis": {
+      "summary": "用户反馈定位不准，信息不足",
+      "userScenario": "当前反馈未明确说明用户场景，待补充。",
+      "productModule": "其他或无法判断",
+      "issueType": "信息不足，暂时无法判断",
+      "alternativeIssueType": "无",
+      "actualResult": "当前反馈未明确说明实际结果，待补充。",
+      "expectedResult": "当前反馈未明确说明预期结果，待产品经理确认。",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "低",
+      "userFacts": [
+        "定位又不准了"
+      ],
+      "aiInferences": [
+        "用户可能在使用地图App时发现当前位置显示不准确，可能与GPS信号、网络定位或地图数据有关。",
+        "需要进一步确认定位不准的具体表现（如位置偏移、无法定位、定位缓慢等）。"
+      ],
+      "evidenceQuotes": [
+        "定位又不准了"
+      ],
+      "missingInformation": [
+        {
+          "field": "具体现象描述",
+          "reason": "用于判断是定位精度不足、定位失败还是偏移等。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "设备型号与操作系统",
+          "reason": "定位问题可能与设备硬件或系统定位服务有关。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "App版本",
+          "reason": "不同版本可能存在已知定位问题。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生时间与地点",
+          "reason": "用于排查是否有区域性信号问题或特定场景。",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "网络环境",
+          "reason": "定位可能依赖网络辅助。",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "用户反馈仅一句话，未提供具体现象、设备、版本、环境等信息，无法判断是软件Bug、数据问题还是用户操作相关。",
+      "recommendedNextAction": "建议产品经理联系用户补充具体定位不准的表现、设备型号、App版本、发生地点和网络环境等信息。",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_013",
+    "feedbackText": "公交车还有两站才到，但地图上显示已经到站了。",
+    "expectedProductModule": "实时交通、航班与出行信息",
+    "expectedIssueType": "地图或业务数据问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "10.123",
+    "success": true,
+    "diagnosis": {
+      "summary": "公交实时到站信息与实际位置不符",
+      "userScenario": "用户正在查看公交实时到站信息，发现地图显示的公交车位置与实际进度不一致",
+      "productModule": "实时交通、航班与出行信息",
+      "issueType": "地图或业务数据问题",
+      "alternativeIssueType": "Bug",
+      "actualResult": "地图显示公交车已经到站，但用户指出公交车还有两站才到",
+      "expectedResult": "地图应准确显示公交车的实际位置，即还有两站到达",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "公交车还有两站才到，但地图上显示已经到站了"
+      ],
+      "aiInferences": [
+        "可能与实时公交数据更新延迟或定位偏差有关，需要进一步确认"
+      ],
+      "evidenceQuotes": [
+        "公交车还有两站才到，但地图上显示已经到站了"
+      ],
+      "missingInformation": [
+        {
+          "field": "公交线路或车辆编号",
+          "reason": "用于定位具体的数据源或线路",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "发生时间和地点",
+          "reason": "用于复现和排查数据时效性",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "设备型号与应用版本",
+          "reason": "用于确认是否为客户端特定问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "是否多次出现",
+          "reason": "用于判断是偶发还是系统性问题",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "无法确认是数据源问题还是定位Bug，也不清楚影响范围，需要更多信息",
+      "recommendedNextAction": "建议产品经理补充公交线路、时间地点等详细信息，并联系数据提供方核实实时公交数据准确性，同时尝试复现问题",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_014",
+    "feedbackText": "轨迹记录结束后导出的GPX文件没有最后五分钟的路线。",
+    "expectedProductModule": "定位与轨迹",
+    "expectedIssueType": "Bug",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "8.784",
+    "success": true,
+    "diagnosis": {
+      "summary": "导出的GPX文件缺失最后五分钟轨迹",
+      "userScenario": "用户使用轨迹记录功能后导出GPX文件，发现文件不完整",
+      "productModule": "定位与轨迹",
+      "issueType": "Bug",
+      "alternativeIssueType": "无",
+      "actualResult": "导出的GPX文件缺少最后五分钟的路线数据",
+      "expectedResult": "导出的GPX文件应包含完整记录的轨迹数据",
+      "severitySuggestion": "待人工判断",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "轨迹记录结束后导出的GPX文件没有最后五分钟的路线"
+      ],
+      "aiInferences": [
+        "可能与轨迹记录结束时的数据保存逻辑有关",
+        "可能与导出时的数据截断或同步延迟有关"
+      ],
+      "evidenceQuotes": [
+        "轨迹记录结束后导出的GPX文件没有最后五分钟的路线"
+      ],
+      "missingInformation": [
+        {
+          "field": "设备型号与操作系统",
+          "reason": "用于确认是否与特定设备或系统相关",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "App版本",
+          "reason": "用于确认是否为已知版本问题",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "轨迹记录的具体时长和结束方式",
+          "reason": "用于判断是否与记录时长或手动停止有关",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "是否可复现",
+          "reason": "用于确认问题稳定性和影响范围",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "缺少环境信息和复现信息，无法确认是否为偶发问题或特定条件触发",
+      "recommendedNextAction": "建议补充设备、系统、App版本信息，并尝试复现问题，确认是否每次导出都缺失最后五分钟数据",
+      "promptVersion": "v1"
+    },
+    "error": null
+  },
+  {
+    "case_id": "gs_v1_015",
+    "feedbackText": "搜索公司楼下的充电站，结果里有一个已经拆掉的站点，还显示可用。",
+    "expectedProductModule": "搜索与POI",
+    "expectedIssueType": "地图或业务数据问题",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "promptVersion": "v1",
+    "processingTimeSeconds": "5.360",
+    "success": true,
+    "diagnosis": {
+      "summary": "搜索结果显示已拆除充电站可用",
+      "userScenario": "用户在公司楼下搜索充电站",
+      "productModule": "搜索与POI",
+      "issueType": "地图或业务数据问题",
+      "alternativeIssueType": "无",
+      "actualResult": "搜索结果中有一个已拆掉的充电站仍显示可用",
+      "expectedResult": "已拆除的充电站不应显示或应标记为不可用",
+      "severitySuggestion": "S3",
+      "prioritySuggestion": "待人工判断",
+      "confidenceLevel": "中",
+      "userFacts": [
+        "搜索公司楼下的充电站",
+        "结果中有一个已经拆掉的站点",
+        "还显示可用"
+      ],
+      "aiInferences": [
+        "该POI数据可能未及时更新，需要进一步确认"
+      ],
+      "evidenceQuotes": [
+        "搜索公司楼下的充电站，结果里有一个已经拆掉的站点，还显示可用。"
+      ],
+      "missingInformation": [
+        {
+          "field": "具体位置信息",
+          "reason": "用于确认POI数据范围",
+          "status": "未提供",
+          "value": ""
+        },
+        {
+          "field": "app版本",
+          "reason": "用于确认问题是否已在后续版本修复",
+          "status": "未提供",
+          "value": ""
+        }
+      ],
+      "uncertainty": "无法确认该充电站拆除时间及数据更新延迟原因",
+      "recommendedNextAction": "建议产品经理核实该充电站POI数据来源，并确认是否已从数据源中移除或标记",
+      "promptVersion": "v1"
+    },
+    "error": null
+  }
+]
