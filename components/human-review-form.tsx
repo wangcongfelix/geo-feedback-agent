@@ -17,8 +17,11 @@ import {
   CheckCircle2,
   PencilLine,
   RotateCcw,
-  ShieldCheck
+  Save,
+  ShieldCheck,
+  X
 } from 'lucide-react'
+import { useState } from 'react'
 
 type HumanReviewFormProps = {
   original: DiagnosisResult
@@ -28,6 +31,61 @@ type HumanReviewFormProps = {
   onConfirm: () => void
   onReset: () => void
 }
+
+type ReviewFieldConfig = {
+  field: ReviewableField
+  label: string
+  type: 'text' | 'select'
+  options?: readonly string[]
+  compact?: boolean
+}
+
+const reviewFields: ReviewFieldConfig[] = [
+  { field: 'summary', label: '问题标题', type: 'text', compact: true },
+  { field: 'userScenario', label: '用户场景', type: 'text' },
+  {
+    field: 'productModule',
+    label: '产品模块',
+    type: 'select',
+    options: ProductModuleSchema.options,
+    compact: true
+  },
+  {
+    field: 'issueType',
+    label: '问题类型',
+    type: 'select',
+    options: IssueTypeSchema.options,
+    compact: true
+  },
+  {
+    field: 'alternativeIssueType',
+    label: '备选问题类型',
+    type: 'text',
+    compact: true
+  },
+  { field: 'actualResult', label: '实际结果', type: 'text' },
+  { field: 'expectedResult', label: '预期结果', type: 'text' },
+  {
+    field: 'severitySuggestion',
+    label: '严重程度',
+    type: 'select',
+    options: SeveritySchema.options,
+    compact: true
+  },
+  {
+    field: 'prioritySuggestion',
+    label: '优先级',
+    type: 'select',
+    options: PrioritySchema.options,
+    compact: true
+  },
+  { field: 'uncertainty', label: '不确定性', type: 'text' },
+  {
+    field: 'recommendedNextAction',
+    label: '下一步建议',
+    type: 'text'
+  }
+]
 
 export default function HumanReviewForm({
   original,
@@ -57,8 +115,8 @@ export default function HumanReviewForm({
   }
 
   return (
-    <section className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+    <section className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-5">
+      <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
         <div>
           <div className="flex items-center gap-2">
             <PencilLine className="h-5 w-5 text-emerald-700" />
@@ -69,11 +127,11 @@ export default function HumanReviewForm({
           </div>
 
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            以下字段可以人工修改。最终结果以产品经理确认内容为准。
+            字段已由AI预填。可以直接确认，也可以只展开需要修正的卡片。
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:items-end">
+        <div className="flex flex-wrap items-center gap-3 xl:justify-end">
           <ReviewStatusBadge status={reviewStatus} />
 
           <button
@@ -85,7 +143,7 @@ export default function HumanReviewForm({
             <CheckCircle2 className="h-4 w-4" />
             {reviewStatus === 'confirmed'
               ? '已确认'
-              : '接受AI建议并确认'}
+              : '接受全部AI建议并确认'}
           </button>
         </div>
       </div>
@@ -118,148 +176,34 @@ export default function HumanReviewForm({
         )}
       </div>
 
-      <div className="mt-6 space-y-5">
-        <EditableTextArea
-          label="问题标题"
-          value={value.summary}
-          modified={isModified('summary')}
-          rows={2}
-          onChange={next =>
-            updateField('summary', next)
-          }
-        />
-
-        <EditableTextArea
-          label="用户使用场景"
-          value={value.userScenario}
-          modified={isModified('userScenario')}
-          rows={3}
-          onChange={next =>
-            updateField('userScenario', next)
-          }
-        />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <EditableSelect
-            label="产品模块"
-            value={value.productModule}
-            options={ProductModuleSchema.options}
-            modified={isModified('productModule')}
-            onChange={next =>
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {reviewFields.map(config => (
+          <ReviewFieldCard
+            key={config.field}
+            config={config}
+            value={String(value[config.field])}
+            modified={isModified(config.field)}
+            onSave={next =>
               updateField(
-                'productModule',
-                next as DiagnosisResult['productModule']
+                config.field,
+                next as DiagnosisResult[typeof config.field]
               )
             }
           />
-
-          <EditableSelect
-            label="问题类型"
-            value={value.issueType}
-            options={IssueTypeSchema.options}
-            modified={isModified('issueType')}
-            onChange={next =>
-              updateField(
-                'issueType',
-                next as DiagnosisResult['issueType']
-              )
-            }
-          />
-        </div>
-
-        <EditableTextArea
-          label="备选问题类型"
-          value={value.alternativeIssueType}
-          modified={isModified('alternativeIssueType')}
-          rows={2}
-          onChange={next =>
-            updateField('alternativeIssueType', next)
-          }
-        />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <EditableTextArea
-            label="实际结果"
-            value={value.actualResult}
-            modified={isModified('actualResult')}
-            rows={4}
-            onChange={next =>
-              updateField('actualResult', next)
-            }
-          />
-
-          <EditableTextArea
-            label="预期结果"
-            value={value.expectedResult}
-            modified={isModified('expectedResult')}
-            rows={4}
-            onChange={next =>
-              updateField('expectedResult', next)
-            }
-          />
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <EditableSelect
-            label="严重程度"
-            value={value.severitySuggestion}
-            options={SeveritySchema.options}
-            modified={isModified('severitySuggestion')}
-            onChange={next =>
-              updateField(
-                'severitySuggestion',
-                next as DiagnosisResult['severitySuggestion']
-              )
-            }
-          />
-
-          <EditableSelect
-            label="优先级"
-            value={value.prioritySuggestion}
-            options={PrioritySchema.options}
-            modified={isModified('prioritySuggestion')}
-            onChange={next =>
-              updateField(
-                'prioritySuggestion',
-                next as DiagnosisResult['prioritySuggestion']
-              )
-            }
-          />
-        </div>
-
-        <EditableTextArea
-          label="不确定性说明"
-          value={value.uncertainty}
-          modified={isModified('uncertainty')}
-          rows={3}
-          onChange={next =>
-            updateField('uncertainty', next)
-          }
-        />
-
-        <EditableTextArea
-          label="建议下一步"
-          value={value.recommendedNextAction}
-          modified={isModified('recommendedNextAction')}
-          rows={3}
-          onChange={next =>
-            updateField('recommendedNextAction', next)
-          }
-        />
+        ))}
       </div>
 
-      <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
 
           <p className="text-sm leading-6 text-amber-800">
-            确认操作只代表产品经理已经审核当前诊断结果，
-            不代表问题已经完成技术排查或进入研发排期。
+            确认只代表产品经理已经审核当前诊断结果，不代表问题已经完成技术排查或进入研发排期。
           </p>
         </div>
       </div>
 
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={onReset}
@@ -283,6 +227,121 @@ export default function HumanReviewForm({
         </button>
       </div>
     </section>
+  )
+}
+
+function ReviewFieldCard({
+  config,
+  value,
+  modified,
+  onSave
+}: {
+  config: ReviewFieldConfig
+  value: string
+  modified: boolean
+  onSave: (value: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+
+  function startEdit() {
+    setDraft(value)
+    setEditing(true)
+  }
+
+  function cancelEdit() {
+    setDraft(value)
+    setEditing(false)
+  }
+
+  function saveEdit() {
+    onSave(draft)
+    setEditing(false)
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold text-slate-500">
+              {config.label}
+            </p>
+
+            {modified && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                已人工修改
+              </span>
+            )}
+          </div>
+
+          {!editing && (
+            <p
+              className={`mt-2 text-sm leading-6 text-slate-800 ${
+                config.compact ? 'line-clamp-2' : 'line-clamp-3'
+              }`}
+            >
+              {value || '待补充'}
+            </p>
+          )}
+        </div>
+
+        {!editing && (
+          <button
+            type="button"
+            onClick={startEdit}
+            className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            编辑
+          </button>
+        )}
+      </div>
+
+      {editing && (
+        <div className="mt-3 space-y-3">
+          {config.type === 'select' ? (
+            <select
+              value={draft}
+              onChange={event => setDraft(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            >
+              {config.options?.map(option => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <textarea
+              value={draft}
+              rows={config.compact ? 3 : 5}
+              onChange={event => setDraft(event.target.value)}
+              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            />
+          )}
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              <X className="h-3.5 w-3.5" />
+              取消
+            </button>
+
+            <button
+              type="button"
+              onClick={saveEdit}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              <Save className="h-3.5 w-3.5" />
+              保存
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -317,88 +376,5 @@ function ReviewStatusBadge({
     >
       {current.text}
     </span>
-  )
-}
-
-type EditableTextAreaProps = {
-  label: string
-  value: string
-  modified: boolean
-  rows: number
-  onChange: (value: string) => void
-}
-
-function EditableTextArea({
-  label,
-  value,
-  modified,
-  rows,
-  onChange
-}: EditableTextAreaProps) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <label className="text-sm font-medium text-slate-700">
-          {label}
-        </label>
-
-        {modified && (
-          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-            已人工修改
-          </span>
-        )}
-      </div>
-
-      <textarea
-        value={value}
-        rows={rows}
-        onChange={event => onChange(event.target.value)}
-        className="w-full resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-      />
-    </div>
-  )
-}
-
-type EditableSelectProps = {
-  label: string
-  value: string
-  options: readonly string[]
-  modified: boolean
-  onChange: (value: string) => void
-}
-
-function EditableSelect({
-  label,
-  value,
-  options,
-  modified,
-  onChange
-}: EditableSelectProps) {
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <label className="text-sm font-medium text-slate-700">
-          {label}
-        </label>
-
-        {modified && (
-          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-            已人工修改
-          </span>
-        )}
-      </div>
-
-      <select
-        value={value}
-        onChange={event => onChange(event.target.value)}
-        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-      >
-        {options.map(option => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </div>
   )
 }

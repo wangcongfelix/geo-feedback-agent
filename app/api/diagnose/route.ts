@@ -1,4 +1,8 @@
-import { DiagnosisSchema, FeedbackInputSchema } from '@/lib/diagnosis'
+import {
+  DiagnosisSchema,
+  FeedbackInputSchema,
+  type FeedbackInput
+} from '@/lib/diagnosis'
 import {
   buildDiagnosisUserPrompt,
   DIAGNOSIS_SYSTEM_PROMPT
@@ -59,6 +63,46 @@ function getTopLevelKeys(value: unknown) {
   }
 
   return []
+}
+
+const explicitFailurePatterns = [
+  '打不开',
+  '无法打开',
+  '闪退',
+  '崩溃',
+  '卡死',
+  '无响应',
+  '点击没反应',
+  '一直加载',
+  '加载失败',
+  '长时间无法加载'
+]
+
+const bugGuardrailMessage =
+  '内部判断提示：该反馈已经明确描述功能异常。不得仅因缺少设备、版本或复现信息，将issueType判断为“信息不足，暂时无法判断”。除非存在更明确的数据问题证据，否则优先判断为Bug。'
+
+function shouldApplyBugGuardrail(feedbackText: string) {
+  return explicitFailurePatterns.some(pattern =>
+    feedbackText.includes(pattern)
+  )
+}
+
+function buildGuardedDiagnosisUserPrompt(
+  feedbackInput: FeedbackInput
+) {
+  const prompt = buildDiagnosisUserPrompt(feedbackInput)
+
+  if (!shouldApplyBugGuardrail(feedbackInput.feedbackText)) {
+    return {
+      prompt,
+      guardrailApplied: false
+    }
+  }
+
+  return {
+    prompt: `${prompt}\n\n${bugGuardrailMessage}`,
+    guardrailApplied: true
+  }
 }
 
 /**
@@ -151,6 +195,8 @@ export async function POST(request: Request) {
     }
 
     const feedbackInput = inputResult.data
+    const guardedPrompt =
+      buildGuardedDiagnosisUserPrompt(feedbackInput)
 
     /**
      * 默认使用Mock模式。
@@ -171,6 +217,7 @@ export async function POST(request: Request) {
           provider: 'mock',
           model: 'mock-diagnosis-v1',
           promptVersion: parsedMock.promptVersion,
+          guardrailApplied: guardedPrompt.guardrailApplied,
           inputEcho: {
             feedbackText: feedbackInput.feedbackText,
             productType: feedbackInput.productType
@@ -216,7 +263,7 @@ export async function POST(request: Request) {
               },
               {
                 role: 'user',
-                content: buildDiagnosisUserPrompt(feedbackInput)
+                content: guardedPrompt.prompt
               }
             ],
             response_format: {
@@ -265,7 +312,8 @@ export async function POST(request: Request) {
             provider: 'deepseek',
             model,
             promptVersion:
-              diagnosisResult.data.promptVersion
+              diagnosisResult.data.promptVersion,
+            guardrailApplied: guardedPrompt.guardrailApplied
           }
         })
       } catch (error) {
@@ -322,7 +370,7 @@ export async function POST(request: Request) {
         },
         {
           role: 'user',
-          content: buildDiagnosisUserPrompt(feedbackInput)
+          content: guardedPrompt.prompt
         }
       ],
       response_format: zodResponseFormat(
@@ -372,7 +420,8 @@ export async function POST(request: Request) {
       meta: {
         provider: 'gemini',
         model,
-        promptVersion: diagnosisResult.data.promptVersion
+        promptVersion: diagnosisResult.data.promptVersion,
+        guardrailApplied: guardedPrompt.guardrailApplied
       }
     })
   } catch (error) {
