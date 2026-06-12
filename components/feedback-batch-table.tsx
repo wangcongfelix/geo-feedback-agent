@@ -1,11 +1,21 @@
 'use client'
 
 import HumanReviewForm from '@/components/human-review-form'
+import StatusBadge from '@/components/status-badge'
 import TicketGenerator from '@/components/ticket-generator'
 import {
-  downloadFeedbackMasterCsv,
-  exportSelectedFeedbackPackage
+  exportSelectedFeedbackPackage,
+  saveFeedbackMasterCsv
 } from '@/lib/export-feedback'
+import {
+  displayIssueType,
+  processingStatusLabel,
+  processingStatusTone,
+  reviewStatusLabel,
+  reviewStatusTone,
+  ticketStatusLabel,
+  ticketStatusTone
+} from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
 import type { FeedbackInput } from '@/lib/diagnosis'
 import { getModifiedFields } from '@/lib/review'
@@ -76,7 +86,6 @@ export default function FeedbackBatchTable({
       record.reviewStatus === reviewStatusFilter
     const matchesPending =
       !pendingOnly ||
-      diagnosis?.severitySuggestion === '待人工判断' ||
       diagnosis?.prioritySuggestion === '待人工判断'
 
     return (
@@ -116,11 +125,19 @@ export default function FeedbackBatchTable({
   )
 
   async function handleExportSelectedPackage() {
-    const result = await exportSelectedFeedbackPackage(
-      selectedRecords
-    )
+    const result = await exportSelectedFeedbackPackage(records)
 
-    setExportMessage(result.message)
+    if (!result.cancelled) {
+      setExportMessage(result.message)
+    }
+  }
+
+  async function handleSaveMasterCsv() {
+    const result = await saveFeedbackMasterCsv(records)
+
+    if (!result.cancelled) {
+      setExportMessage(result.message)
+    }
   }
 
   return (
@@ -144,24 +161,27 @@ export default function FeedbackBatchTable({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => downloadFeedbackMasterCsv(records)}
+              onClick={handleSaveMasterCsv}
               className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               <Download className="h-4 w-4" />
-              导出总表CSV
+              下载反馈总表
             </button>
 
             <button
               type="button"
-              disabled={selectedRecords.length === 0}
               onClick={handleExportSelectedPackage}
               className="flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               <FileDown className="h-4 w-4" />
-              导出选中问题单
+              选择文件夹并导出全部
             </button>
           </div>
         </div>
+
+        <p className="mt-2 text-xs text-slate-500 xl:text-right">
+          将反馈总表和已生成的问题单保存到所选文件夹。
+        </p>
 
         {exportMessage && (
           <p className="mt-3 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-700">
@@ -181,12 +201,18 @@ export default function FeedbackBatchTable({
             value={issueTypeFilter}
             options={issueTypeOptions}
             onChange={setIssueTypeFilter}
+            formatOption={displayIssueType}
           />
           <FilterSelect
             label="审核状态"
             value={reviewStatusFilter}
             options={['not_reviewed', 'reviewing', 'confirmed']}
             onChange={setReviewStatusFilter}
+            formatOption={value =>
+              reviewStatusLabel(
+                value as 'not_reviewed' | 'reviewing' | 'confirmed'
+              )
+            }
           />
           <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <input
@@ -233,7 +259,7 @@ export default function FeedbackBatchTable({
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="min-w-[1180px] w-full border-separate border-spacing-0 text-left text-sm">
+          <table className="min-w-[1080px] w-full border-separate border-spacing-0 text-left text-sm">
             <thead>
               <tr className="text-xs text-slate-500">
                 <th className="border-b border-slate-200 px-3 py-2">
@@ -243,7 +269,7 @@ export default function FeedbackBatchTable({
                   编号
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2">
-                  原始反馈摘要
+                  原始反馈
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2">
                   产品模块
@@ -252,16 +278,13 @@ export default function FeedbackBatchTable({
                   问题类型
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2">
-                  严重程度
-                </th>
-                <th className="border-b border-slate-200 px-3 py-2">
-                  优先级
+                  处理优先级
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2">
                   置信度
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2">
-                  缺失
+                  待补充信息
                 </th>
                 <th className="border-b border-slate-200 px-3 py-2">
                   处理状态
@@ -315,28 +338,55 @@ export default function FeedbackBatchTable({
                       {diagnosis?.productModule ?? '-'}
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
-                      {diagnosis?.issueType ?? '-'}
+                      {displayIssueType(diagnosis?.issueType ?? '')}
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
-                      {diagnosis?.severitySuggestion ?? '-'}
-                    </td>
-                    <td className="border-b border-slate-100 px-3 py-3">
-                      {diagnosis?.prioritySuggestion ?? '-'}
+                      {diagnosis?.prioritySuggestion ? (
+                        <StatusBadge
+                          label={diagnosis.prioritySuggestion}
+                          tone={
+                            diagnosis.prioritySuggestion ===
+                            '待人工判断'
+                              ? 'orange'
+                              : 'blue'
+                          }
+                        />
+                      ) : (
+                        '-'
+                      )}
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
                       {diagnosis?.confidenceLevel ?? '-'}
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
-                      {diagnosis?.missingInformation.length ?? 0}
+                      {diagnosis
+                        ? `待补充 ${diagnosis.missingInformation.length} 项`
+                        : '-'}
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
-                      {record.processingStatus}
+                      <StatusBadge
+                        label={processingStatusLabel(
+                          record.processingStatus
+                        )}
+                        tone={processingStatusTone(
+                          record.processingStatus
+                        )}
+                        loading={
+                          record.processingStatus === 'processing'
+                        }
+                      />
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
-                      {record.reviewStatus}
+                      <StatusBadge
+                        label={reviewStatusLabel(record.reviewStatus)}
+                        tone={reviewStatusTone(record.reviewStatus)}
+                      />
                     </td>
                     <td className="border-b border-slate-100 px-3 py-3">
-                      {record.ticketMarkdown ? '已生成' : '未生成'}
+                      <StatusBadge
+                        label={ticketStatusLabel(record)}
+                        tone={ticketStatusTone(record)}
+                      />
                     </td>
                   </tr>
                 )
@@ -442,15 +492,23 @@ function CompactDiagnosisCard({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <SmallMetric label="产品模块" value={diagnosis.productModule} />
-        <SmallMetric label="问题类型" value={diagnosis.issueType} />
         <SmallMetric
-          label="严重程度"
-          value={diagnosis.severitySuggestion}
+          label="问题类型"
+          value={displayIssueType(diagnosis.issueType)}
         />
-        <SmallMetric
-          label="优先级"
-          value={diagnosis.prioritySuggestion}
-        />
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <p className="text-xs text-slate-500">处理优先级</p>
+          <div className="mt-1">
+            <StatusBadge
+              label={diagnosis.prioritySuggestion}
+              tone={
+                diagnosis.prioritySuggestion === '待人工判断'
+                  ? 'orange'
+                  : 'blue'
+              }
+            />
+          </div>
+        </div>
         <SmallMetric label="置信度" value={diagnosis.confidenceLevel} />
         <SmallMetric label="Provider" value={record.provider || 'mock'} />
       </div>
@@ -468,13 +526,13 @@ function CompactDiagnosisCard({
           </p>
           <p>
             <span className="font-medium text-slate-800">
-              实际结果：
+              实际情况：
             </span>
             {diagnosis.actualResult}
           </p>
           <p>
             <span className="font-medium text-slate-800">
-              预期结果：
+              期望效果：
             </span>
             {diagnosis.expectedResult}
           </p>
@@ -533,12 +591,14 @@ function FilterSelect({
   label,
   value,
   options,
-  onChange
+  onChange,
+  formatOption = option => option
 }: {
   label: string
   value: string
   options: string[]
   onChange: (value: string) => void
+  formatOption?: (value: string) => string
 }) {
   return (
     <label className="text-sm">
@@ -554,7 +614,7 @@ function FilterSelect({
         <option value="">全部</option>
         {options.map(option => (
           <option key={option} value={option}>
-            {option}
+            {formatOption(option)}
           </option>
         ))}
       </select>
@@ -594,17 +654,13 @@ function buildBatchOverview(records: FeedbackRecord[]) {
     产品需求数量: diagnoses.filter(
       diagnosis => diagnosis?.issueType === '产品需求'
     ).length,
-    使用咨询数量: diagnoses.filter(
+    使用体验数量: diagnoses.filter(
       diagnosis =>
-        diagnosis?.issueType === '使用咨询或操作问题'
-    ).length,
-    信息不足数量: diagnoses.filter(
-      diagnosis =>
+        diagnosis?.issueType === '使用咨询或操作问题' ||
         diagnosis?.issueType === '信息不足，暂时无法判断'
     ).length,
     待人工判断数量: diagnoses.filter(
       diagnosis =>
-        diagnosis?.severitySuggestion === '待人工判断' ||
         diagnosis?.prioritySuggestion === '待人工判断'
     ).length,
     已确认数量: records.filter(

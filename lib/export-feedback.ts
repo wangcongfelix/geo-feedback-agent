@@ -1,3 +1,9 @@
+import {
+  displayIssueType,
+  processingStatusLabel,
+  reviewStatusLabel,
+  ticketStatusLabel
+} from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
 
 const CSV_COLUMNS = [
@@ -6,10 +12,9 @@ const CSV_COLUMNS = [
   'product_module',
   'issue_type',
   'alternative_issue_type',
-  'severity',
   'priority',
   'confidence',
-  'missing_information_count',
+  'pending_information_count',
   'review_status',
   'modified_field_count',
   'ticket_generated',
@@ -25,11 +30,12 @@ const CSV_COLUMNS = [
 ] as const
 
 export type ExportResult = {
-  usedDirectoryPicker: boolean
+  cancelled: boolean
+  usedNativePicker: boolean
   message: string
 }
 
-type DirectoryPickerWindow = Window & {
+type PickerWindow = Window & {
   showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>
 }
 
@@ -43,23 +49,25 @@ export function buildFeedbackMasterCsv(
       feedback_id: record.id,
       raw_feedback: record.rawFeedback,
       product_module: diagnosis?.productModule ?? '',
-      issue_type: diagnosis?.issueType ?? '',
-      alternative_issue_type:
-        diagnosis?.alternativeIssueType ?? '',
-      severity: diagnosis?.severitySuggestion ?? '',
+      issue_type: displayIssueType(diagnosis?.issueType ?? ''),
+      alternative_issue_type: displayIssueType(
+        diagnosis?.alternativeIssueType ?? ''
+      ),
       priority: diagnosis?.prioritySuggestion ?? '',
       confidence: diagnosis?.confidenceLevel ?? '',
-      missing_information_count: String(
+      pending_information_count: String(
         diagnosis?.missingInformation.length ?? ''
       ),
-      review_status: record.reviewStatus,
+      review_status: reviewStatusLabel(record.reviewStatus),
       modified_field_count: String(record.modifiedFields.length),
-      ticket_generated: record.ticketMarkdown ? 'true' : 'false',
+      ticket_generated: ticketStatusLabel(record),
       ticket_type: record.ticketType ?? '',
       ticket_filename: record.ticketMarkdown
         ? buildTicketFilename(record)
         : '',
-      processing_status: record.processingStatus,
+      processing_status: processingStatusLabel(
+        record.processingStatus
+      ),
       error_message: record.errorMessage,
       prompt_version: diagnosis?.promptVersion ?? '',
       provider: record.provider,
@@ -78,14 +86,21 @@ export function buildFeedbackMasterCsv(
     .join('\n')}\n`
 }
 
-export function downloadFeedbackMasterCsv(
+export async function saveFeedbackMasterCsv(
   records: FeedbackRecord[]
-) {
+): Promise<ExportResult> {
   const filename = `feedback_master_${formatDateForFilename(
     new Date()
   )}.csv`
+  const csv = buildFeedbackMasterCsv(records)
 
-  downloadTextFile(filename, buildFeedbackMasterCsv(records), 'text/csv')
+  downloadTextFile(filename, csv, 'text/csv')
+
+  return {
+    cancelled: false,
+    usedNativePicker: false,
+    message: '反馈总表已下载'
+  }
 }
 
 export async function exportSelectedFeedbackPackage(
@@ -96,35 +111,53 @@ export async function exportSelectedFeedbackPackage(
       record.reviewStatus === 'confirmed' && record.ticketMarkdown
   )
   const csv = buildFeedbackMasterCsv(records)
-  const windowWithPicker = window as DirectoryPickerWindow
+  const pickerWindow = window as PickerWindow
+  const timestamp = formatDateForFilename(new Date())
 
-  if (windowWithPicker.showDirectoryPicker) {
-    const root = await windowWithPicker.showDirectoryPicker()
-    const folder = await root.getDirectoryHandle(
-      `GeoFeedback_${formatDateForFilename(new Date())}`,
-      { create: true }
-    )
-    const ticketsFolder = await folder.getDirectoryHandle('tickets', {
-      create: true
-    })
-
-    await writeFileToDirectory(
-      folder,
-      'feedback_master.csv',
-      csv
-    )
-
-    for (const record of exportable) {
-      await writeFileToDirectory(
-        ticketsFolder,
-        buildTicketFilename(record),
-        record.ticketMarkdown
+  if (pickerWindow.showDirectoryPicker) {
+    try {
+      const root = await pickerWindow.showDirectoryPicker()
+      const folder = await root.getDirectoryHandle(
+        `GeoFeedback_${timestamp}`,
+        { create: true }
       )
-    }
+      const ticketsFolder = await folder.getDirectoryHandle(
+        'tickets',
+        { create: true }
+      )
 
-    return {
-      usedDirectoryPicker: true,
-      message: `已导出 ${exportable.length} 个问题单。`
+      await writeFileToDirectory(
+        folder,
+        'feedback_master.csv',
+        csv
+      )
+
+      for (const record of exportable) {
+        await writeFileToDirectory(
+          ticketsFolder,
+          buildTicketFilename(record),
+          record.ticketMarkdown
+        )
+      }
+
+      return {
+        cancelled: false,
+        usedNativePicker: true,
+        message:
+          exportable.length > 0
+            ? '反馈总表和问题单已保存到所选文件夹'
+            : '当前没有可导出的问题单，仅保存反馈总表'
+      }
+    } catch (error) {
+      if (isAbortError(error)) {
+        return {
+          cancelled: true,
+          usedNativePicker: true,
+          message: ''
+        }
+      }
+
+      throw error
     }
   }
 
@@ -139,9 +172,9 @@ export async function exportSelectedFeedbackPackage(
   }
 
   return {
-    usedDirectoryPicker: false,
-    message:
-      '当前浏览器不支持选择导出目录，已降级为逐个下载文件。'
+    cancelled: false,
+    usedNativePicker: false,
+    message: '当前浏览器不支持文件夹写入，已改为普通下载'
   }
 }
 
@@ -201,4 +234,11 @@ function formatDateForFilename(date: Date): string {
     pad(date.getHours()),
     pad(date.getMinutes())
   ].join('')
+}
+
+function isAbortError(error: unknown) {
+  return (
+    error instanceof DOMException &&
+    error.name === 'AbortError'
+  )
 }

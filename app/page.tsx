@@ -2,11 +2,16 @@
 
 import FeedbackBatchTable from '@/components/feedback-batch-table'
 import HumanReviewForm from '@/components/human-review-form'
+import StatusBadge from '@/components/status-badge'
 import TicketGenerator from '@/components/ticket-generator'
 import type {
   DiagnosisResult,
   FeedbackInput
 } from '@/lib/diagnosis'
+import {
+  displayIssueType,
+  priorityTone
+} from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
 import {
   createReviewedDiagnosis,
@@ -727,7 +732,7 @@ function SingleInputPanel({
           feedbackText.trim().length < 10 && (
             <div className="mt-2 flex items-start gap-2 text-xs text-amber-700">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              当前反馈信息较少，AI可能只能判断为“信息不足”。
+              当前反馈信息较少，AI可能需要更多上下文才能稳定判断。
             </div>
           )}
 
@@ -1227,7 +1232,7 @@ function EmptyDiagnosisState() {
         等待诊断
       </h2>
       <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-        AI将从用户场景、产品模块、问题类型、缺失信息和优先级等维度提供初步判断。
+        AI将从用户场景、产品模块、问题类型、待补充信息和处理优先级等维度提供初步判断。
       </p>
       <div className="mt-8 flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
         <ShieldCheck className="h-4 w-4" />
@@ -1312,15 +1317,21 @@ function DiagnosisResultState({
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewItem label="产品模块" value={diagnosis.productModule} />
-        <OverviewItem label="问题类型" value={diagnosis.issueType} />
         <OverviewItem
-          label="严重程度"
-          value={diagnosis.severitySuggestion}
+          label="问题类型"
+          value={displayIssueType(diagnosis.issueType)}
         />
-        <OverviewItem
-          label="优先级"
-          value={diagnosis.prioritySuggestion}
-        />
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-xs font-medium text-slate-400">
+            处理优先级
+          </p>
+          <div className="mt-2">
+            <StatusBadge
+              label={diagnosis.prioritySuggestion}
+              tone={priorityTone(diagnosis.prioritySuggestion)}
+            />
+          </div>
+        </div>
         <OverviewItem label="置信度" value={diagnosis.confidenceLevel} />
         <OverviewItem label="Provider" value={provider || 'mock'} />
         <OverviewItem label="Model" value={model || 'mock'} />
@@ -1336,10 +1347,10 @@ function DiagnosisResultState({
             <p>{diagnosis.userScenario}</p>
           </InfoCard>
           <div className="grid gap-4 lg:grid-cols-2">
-            <InfoCard title="实际结果">
+            <InfoCard title="实际情况">
               <p>{diagnosis.actualResult}</p>
             </InfoCard>
-            <InfoCard title="预期结果">
+            <InfoCard title="期望效果">
               <p>{diagnosis.expectedResult}</p>
             </InfoCard>
           </div>
@@ -1362,7 +1373,7 @@ function DiagnosisResultState({
           <InfoCard title="备选问题类型">
             <p>{diagnosis.alternativeIssueType}</p>
           </InfoCard>
-          <InfoCard title="缺失信息">
+          <InfoCard title="待补充信息">
             <p>共 {diagnosis.missingInformation.length} 项</p>
             <ul className="mt-2 space-y-2">
               {diagnosis.missingInformation.map((item, index) => (

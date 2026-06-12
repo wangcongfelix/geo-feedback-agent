@@ -4,9 +4,14 @@ import {
   IssueTypeSchema,
   PrioritySchema,
   ProductModuleSchema,
-  SeveritySchema,
   type DiagnosisResult
 } from '@/lib/diagnosis'
+import {
+  displayIssueType,
+  priorityTone,
+  reviewStatusLabel,
+  reviewStatusTone
+} from '@/lib/display-labels'
 import {
   getModifiedFields,
   type ReviewableField,
@@ -22,6 +27,7 @@ import {
   X
 } from 'lucide-react'
 import { useState } from 'react'
+import StatusBadge from './status-badge'
 
 type HumanReviewFormProps = {
   original: DiagnosisResult
@@ -33,7 +39,12 @@ type HumanReviewFormProps = {
 }
 
 type ReviewFieldConfig = {
-  field: ReviewableField
+  field:
+    | 'summary'
+    | 'productModule'
+    | 'issueType'
+    | 'prioritySuggestion'
+    | 'recommendedNextAction'
   label: string
   type: 'text' | 'select'
   options?: readonly string[]
@@ -41,8 +52,7 @@ type ReviewFieldConfig = {
 }
 
 const reviewFields: ReviewFieldConfig[] = [
-  { field: 'summary', label: '问题标题', type: 'text', compact: true },
-  { field: 'userScenario', label: '用户场景', type: 'text' },
+  { field: 'summary', label: '问题摘要', type: 'text', compact: true },
   {
     field: 'productModule',
     label: '产品模块',
@@ -54,32 +64,18 @@ const reviewFields: ReviewFieldConfig[] = [
     field: 'issueType',
     label: '问题类型',
     type: 'select',
-    options: IssueTypeSchema.options,
-    compact: true
-  },
-  {
-    field: 'alternativeIssueType',
-    label: '备选问题类型',
-    type: 'text',
-    compact: true
-  },
-  { field: 'actualResult', label: '实际结果', type: 'text' },
-  { field: 'expectedResult', label: '预期结果', type: 'text' },
-  {
-    field: 'severitySuggestion',
-    label: '严重程度',
-    type: 'select',
-    options: SeveritySchema.options,
+    options: IssueTypeSchema.options.filter(
+      option => option !== '信息不足，暂时无法判断'
+    ),
     compact: true
   },
   {
     field: 'prioritySuggestion',
-    label: '优先级',
+    label: '处理优先级',
     type: 'select',
     options: PrioritySchema.options,
     compact: true
   },
-  { field: 'uncertainty', label: '不确定性', type: 'text' },
   {
     field: 'recommendedNextAction',
     label: '下一步建议',
@@ -97,10 +93,9 @@ export default function HumanReviewForm({
 }: HumanReviewFormProps) {
   const modifiedFields = getModifiedFields(original, value)
   const hasPendingJudgment =
-    value.severitySuggestion === '待人工判断' ||
     value.prioritySuggestion === '待人工判断'
 
-  function updateField<K extends ReviewableField>(
+  function updateField<K extends keyof DiagnosisResult>(
     field: K,
     nextValue: DiagnosisResult[K]
   ) {
@@ -132,7 +127,10 @@ export default function HumanReviewForm({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 xl:justify-end">
-          <ReviewStatusBadge status={reviewStatus} />
+          <StatusBadge
+            label={reviewStatusLabel(reviewStatus)}
+            tone={reviewStatusTone(reviewStatus)}
+          />
 
           <button
             type="button"
@@ -182,6 +180,11 @@ export default function HumanReviewForm({
             key={config.field}
             config={config}
             value={String(value[config.field])}
+            displayValue={
+              config.field === 'issueType'
+                ? displayIssueType(String(value[config.field]))
+                : String(value[config.field])
+            }
             modified={isModified(config.field)}
             onSave={next =>
               updateField(
@@ -191,6 +194,22 @@ export default function HumanReviewForm({
             }
           />
         ))}
+        <ProblemDescriptionCard
+          actualResult={value.actualResult}
+          expectedResult={value.expectedResult}
+          actualModified={isModified('actualResult')}
+          expectedModified={isModified('expectedResult')}
+          onSave={(actualResult, expectedResult) =>
+            onChange({
+              ...value,
+              actualResult,
+              expectedResult
+            })
+          }
+        />
+        <MissingInformationCard
+          items={value.missingInformation}
+        />
       </div>
 
       <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -230,14 +249,171 @@ export default function HumanReviewForm({
   )
 }
 
+function ProblemDescriptionCard({
+  actualResult,
+  expectedResult,
+  actualModified,
+  expectedModified,
+  onSave
+}: {
+  actualResult: string
+  expectedResult: string
+  actualModified: boolean
+  expectedModified: boolean
+  onSave: (actualResult: string, expectedResult: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [actualDraft, setActualDraft] = useState(actualResult)
+  const [expectedDraft, setExpectedDraft] = useState(expectedResult)
+  const modified = actualModified || expectedModified
+
+  function startEdit() {
+    setActualDraft(actualResult)
+    setExpectedDraft(expectedResult)
+    setEditing(true)
+  }
+
+  function cancelEdit() {
+    setActualDraft(actualResult)
+    setExpectedDraft(expectedResult)
+    setEditing(false)
+  }
+
+  function saveEdit() {
+    onSave(actualDraft, expectedDraft)
+    setEditing(false)
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold text-slate-500">
+              问题描述
+            </p>
+            {modified && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                已人工修改
+              </span>
+            )}
+          </div>
+
+          {!editing && (
+            <div className="mt-2 space-y-1 text-sm leading-6 text-slate-800">
+              <p className="line-clamp-2">
+                <span className="font-medium">实际情况：</span>
+                {actualResult || '待补充'}
+              </p>
+              <p className="line-clamp-2">
+                <span className="font-medium">期望效果：</span>
+                {expectedResult || '待补充'}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {!editing && (
+          <button
+            type="button"
+            onClick={startEdit}
+            className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            编辑
+          </button>
+        )}
+      </div>
+
+      {editing && (
+        <div className="mt-3 space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
+              实际情况
+            </span>
+            <textarea
+              value={actualDraft}
+              rows={4}
+              onChange={event => setActualDraft(event.target.value)}
+              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
+              期望效果
+            </span>
+            <textarea
+              value={expectedDraft}
+              rows={4}
+              onChange={event => setExpectedDraft(event.target.value)}
+              className="w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+            />
+          </label>
+
+          <CardActions onCancel={cancelEdit} onSave={saveEdit} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MissingInformationCard({
+  items
+}: {
+  items: DiagnosisResult['missingInformation']
+}) {
+  return (
+    <details className="rounded-xl border border-slate-200 bg-white p-4">
+      <summary className="cursor-pointer list-none">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-slate-500">
+              待补充信息
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-800">
+              待补充 {items.length} 项
+            </p>
+          </div>
+          <span className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700">
+            查看
+          </span>
+        </div>
+      </summary>
+
+      <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+        {items.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            暂无待补充信息。
+          </p>
+        ) : (
+          items.map((item, index) => (
+            <div
+              key={`${item.field}-${index}`}
+              className="rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-600"
+            >
+              <p className="font-medium text-slate-800">
+                {item.field}
+              </p>
+              <p>状态：{item.status}</p>
+              <p>原因：{item.reason}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </details>
+  )
+}
+
 function ReviewFieldCard({
   config,
   value,
+  displayValue,
   modified,
   onSave
 }: {
   config: ReviewFieldConfig
   value: string
+  displayValue: string
   modified: boolean
   onSave: (value: string) => void
 }) {
@@ -245,7 +421,12 @@ function ReviewFieldCard({
   const [draft, setDraft] = useState(value)
 
   function startEdit() {
-    setDraft(value)
+    setDraft(
+      config.field === 'issueType' &&
+        value === '信息不足，暂时无法判断'
+        ? '使用咨询或操作问题'
+        : value
+    )
     setEditing(true)
   }
 
@@ -276,13 +457,22 @@ function ReviewFieldCard({
           </div>
 
           {!editing && (
-            <p
-              className={`mt-2 text-sm leading-6 text-slate-800 ${
-                config.compact ? 'line-clamp-2' : 'line-clamp-3'
-              }`}
-            >
-              {value || '待补充'}
-            </p>
+            config.field === 'prioritySuggestion' ? (
+              <div className="mt-2">
+                <StatusBadge
+                  label={displayValue || '待补充'}
+                  tone={priorityTone(displayValue)}
+                />
+              </div>
+            ) : (
+              <p
+                className={`mt-2 text-sm leading-6 text-slate-800 ${
+                  config.compact ? 'line-clamp-2' : 'line-clamp-3'
+                }`}
+              >
+                {displayValue || '待补充'}
+              </p>
+            )
           )}
         </div>
 
@@ -307,7 +497,9 @@ function ReviewFieldCard({
             >
               {config.options?.map(option => (
                 <option key={option} value={option}>
-                  {option}
+                  {config.field === 'issueType'
+                    ? displayIssueType(option)
+                    : option}
                 </option>
               ))}
             </select>
@@ -321,23 +513,7 @@ function ReviewFieldCard({
           )}
 
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={cancelEdit}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-            >
-              <X className="h-3.5 w-3.5" />
-              取消
-            </button>
-
-            <button
-              type="button"
-              onClick={saveEdit}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-            >
-              <Save className="h-3.5 w-3.5" />
-              保存
-            </button>
+            <CardActions onCancel={cancelEdit} onSave={saveEdit} />
           </div>
         </div>
       )}
@@ -345,36 +521,32 @@ function ReviewFieldCard({
   )
 }
 
-function ReviewStatusBadge({
-  status
+function CardActions({
+  onCancel,
+  onSave
 }: {
-  status: ReviewStatus
+  onCancel: () => void
+  onSave: () => void
 }) {
-  const statusConfig = {
-    not_reviewed: {
-      text: '未审核',
-      className:
-        'border-slate-200 bg-slate-100 text-slate-600'
-    },
-    reviewing: {
-      text: '审核中',
-      className:
-        'border-amber-200 bg-amber-50 text-amber-700'
-    },
-    confirmed: {
-      text: '已确认',
-      className:
-        'border-emerald-200 bg-emerald-100 text-emerald-700'
-    }
-  }
-
-  const current = statusConfig[status]
-
   return (
-    <span
-      className={`w-fit rounded-full border px-3 py-1 text-xs font-medium ${current.className}`}
-    >
-      {current.text}
-    </span>
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+      >
+        <X className="h-3.5 w-3.5" />
+        取消
+      </button>
+
+      <button
+        type="button"
+        onClick={onSave}
+        className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+      >
+        <Save className="h-3.5 w-3.5" />
+        保存
+      </button>
+    </div>
   )
 }

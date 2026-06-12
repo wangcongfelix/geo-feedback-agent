@@ -4,6 +4,10 @@ import {
   type FeedbackInput
 } from '@/lib/diagnosis'
 import {
+  hasFunctionFailureSignal,
+  normalizeInsufficientIssueType
+} from '@/lib/issue-normalization'
+import {
   buildDiagnosisUserPrompt,
   DIAGNOSIS_SYSTEM_PROMPT
 } from '@/lib/prompts/diagnosis-prompt'
@@ -65,26 +69,11 @@ function getTopLevelKeys(value: unknown) {
   return []
 }
 
-const explicitFailurePatterns = [
-  '打不开',
-  '无法打开',
-  '闪退',
-  '崩溃',
-  '卡死',
-  '无响应',
-  '点击没反应',
-  '一直加载',
-  '加载失败',
-  '长时间无法加载'
-]
-
 const bugGuardrailMessage =
   '内部判断提示：该反馈已经明确描述功能异常。不得仅因缺少设备、版本或复现信息，将issueType判断为“信息不足，暂时无法判断”。除非存在更明确的数据问题证据，否则优先判断为Bug。'
 
 function shouldApplyBugGuardrail(feedbackText: string) {
-  return explicitFailurePatterns.some(pattern =>
-    feedbackText.includes(pattern)
-  )
+  return hasFunctionFailureSignal(feedbackText)
 }
 
 function buildGuardedDiagnosisUserPrompt(
@@ -209,14 +198,18 @@ export async function POST(request: Request) {
     if (useMockAI) {
       const mockDiagnosis = createMockDiagnosis()
       const parsedMock = DiagnosisSchema.parse(mockDiagnosis)
+      const normalizedMock = normalizeInsufficientIssueType({
+        diagnosis: parsedMock,
+        feedbackText: feedbackInput.feedbackText
+      })
 
       return Response.json({
         success: true,
-        data: parsedMock,
+        data: normalizedMock,
         meta: {
           provider: 'mock',
           model: 'mock-diagnosis-v1',
-          promptVersion: parsedMock.promptVersion,
+          promptVersion: normalizedMock.promptVersion,
           guardrailApplied: guardedPrompt.guardrailApplied,
           inputEcho: {
             feedbackText: feedbackInput.feedbackText,
@@ -305,14 +298,19 @@ export async function POST(request: Request) {
           )
         }
 
+        const normalizedDiagnosis = normalizeInsufficientIssueType({
+          diagnosis: diagnosisResult.data,
+          feedbackText: feedbackInput.feedbackText
+        })
+
         return Response.json({
           success: true,
-          data: diagnosisResult.data,
+          data: normalizedDiagnosis,
           meta: {
             provider: 'deepseek',
             model,
             promptVersion:
-              diagnosisResult.data.promptVersion,
+              normalizedDiagnosis.promptVersion,
             guardrailApplied: guardedPrompt.guardrailApplied
           }
         })
@@ -414,13 +412,18 @@ export async function POST(request: Request) {
       )
     }
 
+    const normalizedDiagnosis = normalizeInsufficientIssueType({
+      diagnosis: diagnosisResult.data,
+      feedbackText: feedbackInput.feedbackText
+    })
+
     return Response.json({
       success: true,
-      data: diagnosisResult.data,
+      data: normalizedDiagnosis,
       meta: {
         provider: 'gemini',
         model,
-        promptVersion: diagnosisResult.data.promptVersion,
+        promptVersion: normalizedDiagnosis.promptVersion,
         guardrailApplied: guardedPrompt.guardrailApplied
       }
     })
