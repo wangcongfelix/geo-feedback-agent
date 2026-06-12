@@ -13,6 +13,7 @@ import {
   type ReviewStatus
 } from '@/lib/review'
 import {
+  AlertTriangle,
   CheckCircle2,
   PencilLine,
   RotateCcw,
@@ -37,6 +38,9 @@ export default function HumanReviewForm({
   onReset
 }: HumanReviewFormProps) {
   const modifiedFields = getModifiedFields(original, value)
+  const hasPendingJudgment =
+    value.severitySuggestion === '待人工判断' ||
+    value.prioritySuggestion === '待人工判断'
 
   function updateField<K extends ReviewableField>(
     field: K,
@@ -69,8 +73,34 @@ export default function HumanReviewForm({
           </p>
         </div>
 
-        <ReviewStatusBadge status={reviewStatus} />
+        <div className="flex flex-col gap-3 sm:items-end">
+          <ReviewStatusBadge status={reviewStatus} />
+
+          <button
+            type="button"
+            disabled={reviewStatus === 'confirmed'}
+            onClick={onConfirm}
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {reviewStatus === 'confirmed'
+              ? '已确认'
+              : '接受AI建议并确认'}
+          </button>
+        </div>
       </div>
+
+      {hasPendingJudgment && (
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+
+            <p className="text-sm leading-6 text-amber-800">
+              当前信息不足，可保留待人工判断后继续生成问题单。
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3">
         <p className="text-sm text-slate-600">
