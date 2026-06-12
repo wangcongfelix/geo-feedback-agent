@@ -15,14 +15,16 @@ import type {
 import {
   AlertCircle,
   CheckCircle2,
-  FileText,
+  ImageIcon,
   LoaderCircle,
   MapPinned,
   RefreshCw,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Trash2,
+  Upload
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const productTypes = [
   '地图App',
@@ -55,6 +57,19 @@ type DiagnoseApiResponse =
     }
   }
 
+type ScreenshotAttachment = {
+  name: string
+  size: number
+  previewUrl: string
+}
+
+const screenshotTypes = [
+  'image/png',
+  'image/jpeg',
+  'image/webp'
+]
+const screenshotMaxSizeBytes = 5 * 1024 * 1024
+
 export default function GeoFeedbackPage() {
   const [feedbackText, setFeedbackText] = useState('')
   const [productName, setProductName] = useState('')
@@ -80,6 +95,9 @@ export default function GeoFeedbackPage() {
   const [provider, setProvider] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [screenshotAttachment, setScreenshotAttachment] =
+    useState<ScreenshotAttachment | null>(null)
+  const [screenshotError, setScreenshotError] = useState('')
 
   const canDiagnose =
     feedbackText.trim().length > 0 && !loading
@@ -94,6 +112,18 @@ export default function GeoFeedbackPage() {
     location,
     additionalContext
   }
+
+  const attachmentNames = screenshotAttachment
+    ? [screenshotAttachment.name]
+    : []
+
+  useEffect(() => {
+    return () => {
+      if (screenshotAttachment) {
+        URL.revokeObjectURL(screenshotAttachment.previewUrl)
+      }
+    }
+  }, [screenshotAttachment])
 
   const markDiagnosisOutdated = () => {
     if (diagnosis) {
@@ -116,6 +146,47 @@ export default function GeoFeedbackPage() {
     setConfirmedReview(null)
     setProvider('')
     setErrorMessage('')
+  }
+
+  const handleScreenshotChange = (
+    file: File | undefined
+  ) => {
+    setScreenshotError('')
+
+    if (!file) {
+      return
+    }
+
+    if (!screenshotTypes.includes(file.type)) {
+      setScreenshotError(
+        '仅支持 PNG、JPG/JPEG 或 WebP 格式的截图。'
+      )
+      return
+    }
+
+    if (file.size > screenshotMaxSizeBytes) {
+      setScreenshotError('截图文件不能超过 5MB。')
+      return
+    }
+
+    if (screenshotAttachment) {
+      URL.revokeObjectURL(screenshotAttachment.previewUrl)
+    }
+
+    setScreenshotAttachment({
+      name: file.name,
+      size: file.size,
+      previewUrl: URL.createObjectURL(file)
+    })
+  }
+
+  const handleRemoveScreenshot = () => {
+    if (screenshotAttachment) {
+      URL.revokeObjectURL(screenshotAttachment.previewUrl)
+    }
+
+    setScreenshotAttachment(null)
+    setScreenshotError('')
   }
 const handleDiagnose = async () => {
   if (!canDiagnose) return
@@ -398,7 +469,7 @@ return (
 
           <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
             <div className="flex items-start gap-3">
-              <FileText className="mt-0.5 h-5 w-5 text-slate-400" />
+              <ImageIcon className="mt-0.5 h-5 w-5 text-slate-500" />
 
               <div>
                 <p className="text-sm font-medium text-slate-700">
@@ -406,18 +477,64 @@ return (
                 </p>
 
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  MVP先完成文本诊断。截图上传与多模态理解将在后续阶段接入。
+                  截图将作为问题证据附件保留，当前版本暂不进行AI图片分析。
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled
-              className="mt-4 w-full cursor-not-allowed rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400"
-            >
-              截图上传暂未开放
-            </button>
+            {screenshotAttachment ? (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Blob preview stays local and is not a remote optimized asset. */}
+                <img
+                  src={screenshotAttachment.previewUrl}
+                  alt="问题截图预览"
+                  className="max-h-48 w-full rounded-lg object-contain"
+                />
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">
+                      {screenshotAttachment.name}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      {formatFileSize(screenshotAttachment.size)}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRemoveScreenshot}
+                    className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    删除
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <Upload className="h-4 w-4" />
+                选择截图
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  onChange={event => {
+                    handleScreenshotChange(
+                      event.target.files?.[0]
+                    )
+                    event.target.value = ''
+                  }}
+                />
+              </label>
+            )}
+
+            {screenshotError && (
+              <p className="mt-3 text-sm text-red-600">
+                {screenshotError}
+              </p>
+            )}
           </div>
 
           <button
@@ -446,64 +563,75 @@ return (
       </section>
 
       <section className="min-h-[680px] rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        {loading ? (
-          <LoadingDiagnosisState />
-        ) : errorMessage ? (
-          <ErrorDiagnosisState
-            message={errorMessage}
-            onRetry={handleDiagnose}
-          />
-        ) : diagnosis && reviewedDiagnosis ? (
-          <div className="space-y-8">
-            <DiagnosisResultState
-              diagnosis={diagnosis}
-              provider={provider}
-            />
+        <WorkflowSteps
+          diagnosisReady={Boolean(diagnosis)}
+          reviewConfirmed={reviewStatus === 'confirmed'}
+          ticketReady={Boolean(
+            reviewStatus === 'confirmed' && confirmedReview
+          )}
+        />
 
-            <HumanReviewForm
-              original={diagnosis}
-              value={reviewedDiagnosis}
-              reviewStatus={reviewStatus}
-              onChange={nextValue => {
-                setReviewedDiagnosis(nextValue)
-                setReviewStatus('reviewing')
-                setConfirmedReview(null)
-              }}
-              onReset={() => {
-                setReviewedDiagnosis(
-                  createReviewedDiagnosis(diagnosis)
-                )
-                setReviewStatus('reviewing')
-                setConfirmedReview(null)
-              }}
-              onConfirm={() => {
-                setConfirmedReview({
-                  modifiedFields: getModifiedFields(
-                    diagnosis,
-                    reviewedDiagnosis
-                  ),
-                  confirmedAt: new Date().toISOString()
-                })
-                setReviewStatus('confirmed')
-              }}
+        <div className="mt-6">
+          {loading ? (
+            <LoadingDiagnosisState />
+          ) : errorMessage ? (
+            <ErrorDiagnosisState
+              message={errorMessage}
+              onRetry={handleDiagnose}
             />
+          ) : diagnosis && reviewedDiagnosis ? (
+            <div className="space-y-8">
+              <DiagnosisResultState
+                diagnosis={diagnosis}
+                provider={provider}
+              />
 
-            {reviewStatus === 'confirmed' &&
-              confirmedReview && (
-                <TicketGenerator
-                  key={confirmedReview.confirmedAt}
-                  diagnosis={reviewedDiagnosis}
-                  feedbackInput={currentFeedbackInput}
-                  modifiedFields={
-                    confirmedReview.modifiedFields
-                  }
-                  confirmedAt={confirmedReview.confirmedAt}
-                />
-              )}
-          </div>
-        ) : (
-          <EmptyDiagnosisState />
-        )}
+              <HumanReviewForm
+                original={diagnosis}
+                value={reviewedDiagnosis}
+                reviewStatus={reviewStatus}
+                onChange={nextValue => {
+                  setReviewedDiagnosis(nextValue)
+                  setReviewStatus('reviewing')
+                  setConfirmedReview(null)
+                }}
+                onReset={() => {
+                  setReviewedDiagnosis(
+                    createReviewedDiagnosis(diagnosis)
+                  )
+                  setReviewStatus('reviewing')
+                  setConfirmedReview(null)
+                }}
+                onConfirm={() => {
+                  setConfirmedReview({
+                    modifiedFields: getModifiedFields(
+                      diagnosis,
+                      reviewedDiagnosis
+                    ),
+                    confirmedAt: new Date().toISOString()
+                  })
+                  setReviewStatus('confirmed')
+                }}
+              />
+
+              {reviewStatus === 'confirmed' &&
+                confirmedReview && (
+                  <TicketGenerator
+                    key={`${confirmedReview.confirmedAt}-${attachmentNames.join('|')}`}
+                    diagnosis={reviewedDiagnosis}
+                    feedbackInput={currentFeedbackInput}
+                    modifiedFields={
+                      confirmedReview.modifiedFields
+                    }
+                    confirmedAt={confirmedReview.confirmedAt}
+                    attachmentNames={attachmentNames}
+                  />
+                )}
+            </div>
+          ) : (
+            <EmptyDiagnosisState />
+          )}
+        </div>
       </section>
     </div>
   </main>
@@ -543,6 +671,65 @@ function EnvironmentInput({
       />
     </div>
   )
+}
+
+function WorkflowSteps({
+  diagnosisReady,
+  reviewConfirmed,
+  ticketReady
+}: {
+  diagnosisReady: boolean
+  reviewConfirmed: boolean
+  ticketReady: boolean
+}) {
+  const steps = [
+    {
+      label: 'AI诊断',
+      done: diagnosisReady
+    },
+    {
+      label: '产品经理确认',
+      done: reviewConfirmed
+    },
+    {
+      label: '生成问题单',
+      done: ticketReady
+    }
+  ]
+
+  return (
+    <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-3">
+      {steps.map((step, index) => (
+        <div
+          key={step.label}
+          className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${
+            step.done
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-white text-slate-500'
+          }`}
+        >
+          <span
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+              step.done
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-200 text-slate-600'
+            }`}
+          >
+            {index + 1}
+          </span>
+          {step.label}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function formatFileSize(size: number): string {
+  if (size >= 1024 * 1024) {
+    return `${(size / 1024 / 1024).toFixed(2)} MB`
+  }
+
+  return `${Math.max(1, Math.round(size / 1024))} KB`
 }
 
 function EmptyDiagnosisState() {
@@ -665,7 +852,7 @@ function DiagnosisResultState({
   provider: string
 }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 rounded-2xl border border-blue-200 bg-blue-50/40 p-5">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
           <p className="text-sm font-medium text-blue-600">
@@ -676,15 +863,9 @@ function DiagnosisResultState({
             {diagnosis.summary}
           </h2>
         </div>
-
-        {provider && (
-          <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-            Provider：{provider}
-          </span>
-        )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewItem
           label="产品模块"
           value={diagnosis.productModule}
@@ -701,129 +882,139 @@ function DiagnosisResultState({
           label="优先级"
           value={diagnosis.prioritySuggestion}
         />
-      </div>
-
-      <InfoCard title="用户使用场景">
-        <p>{diagnosis.userScenario}</p>
-      </InfoCard>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <InfoCard title="实际结果">
-          <p>{diagnosis.actualResult}</p>
-        </InfoCard>
-
-        <InfoCard title="预期结果">
-          <p>{diagnosis.expectedResult}</p>
-        </InfoCard>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <StringListCard
-          title="用户明确提供的事实"
-          items={diagnosis.userFacts}
-          emptyText="当前没有提取到明确事实"
+        <OverviewItem
+          label="置信度"
+          value={diagnosis.confidenceLevel}
         />
-
-        <StringListCard
-          title="AI推测"
-          items={diagnosis.aiInferences}
-          emptyText="当前没有需要展示的推测"
-          warning
+        <OverviewItem
+          label="Provider"
+          value={provider || 'mock'}
+        />
+        <OverviewItem
+          label="Prompt版本"
+          value={diagnosis.promptVersion}
         />
       </div>
 
-      <StringListCard
-        title="用户原话证据"
-        items={diagnosis.evidenceQuotes}
-        emptyText="当前没有可引用的用户原话"
-      />
+      <details className="rounded-xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700">
+          查看AI分析依据
+        </summary>
 
-      <InfoCard title="备选问题类型">
-        <p>{diagnosis.alternativeIssueType}</p>
-      </InfoCard>
+        <div className="space-y-5 border-t border-slate-200 p-4">
+          <InfoCard title="用户使用场景">
+            <p>{diagnosis.userScenario}</p>
+          </InfoCard>
 
-      <div>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-semibold">
-            缺失信息检查
-          </h3>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <InfoCard title="实际结果">
+              <p>{diagnosis.actualResult}</p>
+            </InfoCard>
 
-          <span className="text-xs text-slate-400">
-            共 {diagnosis.missingInformation.length} 项
-          </span>
-        </div>
+            <InfoCard title="预期结果">
+              <p>{diagnosis.expectedResult}</p>
+            </InfoCard>
+          </div>
 
-        <div className="space-y-3">
-          {diagnosis.missingInformation.length === 0 ? (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-              当前没有识别到需要补充的信息。
+          <div className="grid gap-4 lg:grid-cols-2">
+            <StringListCard
+              title="用户明确提供的事实"
+              items={diagnosis.userFacts}
+              emptyText="当前没有提取到明确事实"
+            />
+
+            <StringListCard
+              title="AI推测"
+              items={diagnosis.aiInferences}
+              emptyText="当前没有需要展示的推测"
+              warning
+            />
+          </div>
+
+          <StringListCard
+            title="用户原话证据"
+            items={diagnosis.evidenceQuotes}
+            emptyText="当前没有可引用的用户原话"
+          />
+
+          <InfoCard title="备选问题类型">
+            <p>{diagnosis.alternativeIssueType}</p>
+          </InfoCard>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-semibold">
+                缺失信息检查
+              </h3>
+
+              <span className="text-xs text-slate-400">
+                共 {diagnosis.missingInformation.length} 项
+              </span>
             </div>
-          ) : (
-            diagnosis.missingInformation.map(
-              (item, index) => (
-                <div
-                  key={`${item.field}-${index}`}
-                  className="rounded-xl border border-slate-200 p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium text-slate-800">
-                      {item.field}
-                    </p>
 
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                      {item.status}
-                    </span>
-                  </div>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    {item.reason}
-                  </p>
-
-                  {item.value && (
-                    <p className="mt-2 text-sm text-slate-700">
-                      当前值：{item.value}
-                    </p>
-                  )}
+            <div className="space-y-3">
+              {diagnosis.missingInformation.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                  当前没有识别到需要补充的信息。
                 </div>
-              )
-            )
-          )}
+              ) : (
+                diagnosis.missingInformation.map(
+                  (item, index) => (
+                    <div
+                      key={`${item.field}-${index}`}
+                      className="rounded-xl border border-slate-200 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium text-slate-800">
+                          {item.field}
+                        </p>
+
+                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                          {item.status}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                        {item.reason}
+                      </p>
+
+                      {item.value && (
+                        <p className="mt-2 text-sm text-slate-700">
+                          当前值：{item.value}
+                        </p>
+                      )}
+                    </div>
+                  )
+                )
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+            <h3 className="font-semibold text-amber-900">
+              不确定性说明
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-amber-800">
+              {diagnosis.uncertainty}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+            <h3 className="font-semibold text-blue-900">
+              建议下一步
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-blue-800">
+              {diagnosis.recommendedNextAction}
+            </p>
+          </div>
         </div>
-      </div>
-
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-        <h3 className="font-semibold text-amber-900">
-          不确定性说明
-        </h3>
-
-        <p className="mt-2 text-sm leading-6 text-amber-800">
-          {diagnosis.uncertainty}
-        </p>
-      </div>
-
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-        <h3 className="font-semibold text-blue-900">
-          建议下一步
-        </h3>
-
-        <p className="mt-2 text-sm leading-6 text-blue-800">
-          {diagnosis.recommendedNextAction}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5 text-xs text-slate-500">
-        <span>
-          判断置信度：{diagnosis.confidenceLevel}
-        </span>
-
-        <span>
-          Prompt版本：{diagnosis.promptVersion}
-        </span>
-      </div>
+      </details>
 
       <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-600">
         <ShieldCheck className="h-4 w-4 shrink-0" />
-        当前内容是AI初步建议，请以产品经理人工审核后的确认结果生成问题单。
+        AI已完成初步整理，产品经理可直接接受建议或修改少量字段后确认。
       </div>
     </div>
   )

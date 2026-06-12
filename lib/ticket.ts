@@ -31,6 +31,7 @@ export type GenerateTicketInput = {
   feedbackInput: FeedbackInput
   modifiedFields: string[]
   confirmedAt: string
+  attachmentNames?: string[]
 }
 
 export function recommendTicketType(
@@ -52,7 +53,8 @@ export function generateTicket({
   diagnosis,
   feedbackInput,
   modifiedFields,
-  confirmedAt
+  confirmedAt,
+  attachmentNames = []
 }: GenerateTicketInput): GeneratedTicket {
   const generatedAt = new Date().toISOString()
   const title = normalizeValue(diagnosis.summary)
@@ -60,7 +62,8 @@ export function generateTicket({
     diagnosis,
     feedbackInput,
     modifiedFields,
-    confirmedAt
+    confirmedAt,
+    attachmentNames
   })
 
   const markdownContent =
@@ -108,6 +111,7 @@ type CommonTicketData = {
   humanConfirmed: boolean
   confirmedAt: string
   modifiedFields: string[]
+  attachmentNames: string[]
   environment: {
     deviceInfo: string
     appVersion: string
@@ -121,7 +125,8 @@ function buildCommonData({
   diagnosis,
   feedbackInput,
   modifiedFields,
-  confirmedAt
+  confirmedAt,
+  attachmentNames
 }: Omit<GenerateTicketInput, 'ticketType'>): CommonTicketData {
   return {
     title: normalizeValue(diagnosis.summary),
@@ -147,6 +152,7 @@ function buildCommonData({
     humanConfirmed: true,
     confirmedAt,
     modifiedFields,
+    attachmentNames: attachmentNames ?? [],
     environment: {
       deviceInfo: normalizeValue(feedbackInput.deviceInfo),
       appVersion: normalizeValue(feedbackInput.appVersion),
@@ -275,6 +281,9 @@ function productAndEnvironment(data: CommonTicketData): string {
 
 function sharedEvidence(data: CommonTicketData): string {
   return [
+    '## 问题附件',
+    formatAttachments(data.attachmentNames),
+    '',
     '## 缺失信息',
     formatMissingInformation(data.missingInformation),
     '',
@@ -290,6 +299,14 @@ function sharedEvidence(data: CommonTicketData): string {
     '## 不确定性',
     block(data.uncertainty)
   ].join('\n')
+}
+
+function formatAttachments(items: string[]): string {
+  if (items.length === 0) {
+    return '- 未提供'
+  }
+
+  return items.map(item => `- ${normalizeValue(item)}`).join('\n')
 }
 
 function formatMissingInformation(
