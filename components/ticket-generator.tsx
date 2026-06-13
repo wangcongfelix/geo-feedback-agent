@@ -27,6 +27,7 @@ type TicketGeneratorProps = {
   modifiedFields: string[]
   confirmedAt: string
   attachmentNames?: string[]
+  onGenerated?: (ticket: GeneratedTicket) => void
 }
 
 const ticketTypes: TicketType[] = [
@@ -40,7 +41,8 @@ export default function TicketGenerator({
   feedbackInput,
   modifiedFields,
   confirmedAt,
-  attachmentNames = []
+  attachmentNames = [],
+  onGenerated
 }: TicketGeneratorProps) {
   const recommendedType = useMemo(
     () => recommendTicketType(diagnosis.issueType),
@@ -61,16 +63,17 @@ export default function TicketGenerator({
   function handleGenerate() {
     if (!checked) return
 
-    setGeneratedTicket(
-      generateTicket({
-        ticketType: selectedType,
-        diagnosis,
-        feedbackInput,
-        modifiedFields,
-        confirmedAt,
-        attachmentNames
-      })
-    )
+    const ticket = generateTicket({
+      ticketType: selectedType,
+      diagnosis,
+      feedbackInput,
+      modifiedFields,
+      confirmedAt,
+      attachmentNames
+    })
+
+    setGeneratedTicket(ticket)
+    onGenerated?.(ticket)
     setShowJson(false)
     setCopyMessage('')
   }

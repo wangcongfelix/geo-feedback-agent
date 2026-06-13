@@ -3,6 +3,7 @@ import type {
   FeedbackInput,
   MissingInformationItem
 } from '@/lib/diagnosis'
+import { displayIssueType } from '@/lib/display-labels'
 
 export type TicketType =
   | 'bug'
@@ -99,7 +100,6 @@ type CommonTicketData = {
   userScenario: string
   actualResult: string
   expectedResult: string
-  severitySuggestion: string
   prioritySuggestion: string
   missingInformation: MissingInformationItem[]
   uncertainty: string
@@ -134,11 +134,10 @@ function buildCommonData({
     productName: normalizeValue(feedbackInput.productName),
     productType: normalizeValue(feedbackInput.productType),
     productModule: normalizeValue(diagnosis.productModule),
-    issueType: normalizeValue(diagnosis.issueType),
+    issueType: normalizeValue(displayIssueType(diagnosis.issueType)),
     userScenario: normalizeValue(diagnosis.userScenario),
     actualResult: normalizeValue(diagnosis.actualResult),
     expectedResult: normalizeValue(diagnosis.expectedResult),
-    severitySuggestion: normalizeValue(diagnosis.severitySuggestion),
     prioritySuggestion: normalizeValue(diagnosis.prioritySuggestion),
     missingInformation: diagnosis.missingInformation,
     uncertainty: normalizeValue(diagnosis.uncertainty),
@@ -182,13 +181,12 @@ function buildBugTicketMarkdown(data: CommonTicketData): string {
     '## 问题描述',
     line('产品模块', data.productModule),
     line('用户场景', data.userScenario),
-    line('实际结果', data.actualResult),
-    line('预期结果', data.expectedResult),
+    line('实际情况', data.actualResult),
+    line('期望效果', data.expectedResult),
     '',
     '## 复现与影响',
     line('复现步骤', '待补充'),
-    line('严重程度建议', data.severitySuggestion),
-    line('优先级建议', data.prioritySuggestion),
+    line('处理优先级', data.prioritySuggestion),
     '',
     sharedEvidence(data)
   ].join('\n')
@@ -210,13 +208,12 @@ function buildDataIssueTicketMarkdown(
     '## 数据问题描述',
     line('产品模块', data.productModule),
     line('用户场景', data.userScenario),
-    line('当前错误信息', data.actualResult),
-    line('建议正确信息', data.expectedResult),
+    line('实际情况', data.actualResult),
+    line('期望效果', data.expectedResult),
     line('问题位置', data.environment.location),
     '',
     '## 处理建议',
-    line('严重程度建议', data.severitySuggestion),
-    line('优先级建议', data.prioritySuggestion),
+    line('处理优先级', data.prioritySuggestion),
     line('建议下一步', data.recommendedNextAction),
     '',
     sharedEvidence(data)
@@ -239,12 +236,11 @@ function buildProductRequirementTicketMarkdown(
     '## 需求背景',
     line('产品模块', data.productModule),
     line('用户场景', data.userScenario),
-    line('用户问题', data.actualResult),
-    line('用户期望', data.expectedResult),
+    line('当前痛点', data.actualResult),
+    line('期望能力', data.expectedResult),
     '',
     '## 需求判断',
-    line('严重程度建议', data.severitySuggestion),
-    line('优先级建议', data.prioritySuggestion),
+    line('处理优先级', data.prioritySuggestion),
     line('待验证问题', data.uncertainty),
     line('建议下一步', data.recommendedNextAction),
     '',
@@ -284,7 +280,7 @@ function sharedEvidence(data: CommonTicketData): string {
     '## 问题附件',
     formatAttachments(data.attachmentNames),
     '',
-    '## 缺失信息',
+    '## 待补充信息',
     formatMissingInformation(data.missingInformation),
     '',
     '## 用户明确提供的事实',
