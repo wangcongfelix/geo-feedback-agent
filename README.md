@@ -1,196 +1,193 @@
 # GeoFeedback Agent
 
-GeoFeedback Agent 是一个面向地图、导航、出行、航旅和 GIS 产品场景的用户反馈诊断与标准问题单生成工具。
+地图产品用户反馈批量诊断与问题清单工作台
 
-它的目标不是自动替产品经理做最终决策，而是把非结构化用户反馈整理为可审核、可修改、可追踪的问题单草稿。
+GeoFeedback Agent 帮助地图、导航、航旅、智能交通和 GIS 产品经理，将一批非结构化用户反馈转化为可筛选、可审核、可导出的结构化反馈清单，并为需要进入研发流程的问题生成标准问题单。
 
-## 目标用户
+## 项目背景
 
-- 需要处理地图类用户反馈的产品经理
-- 地图、导航、出行、航旅和 GIS 产品实习生
-- 需要把客服、测试或项目现场反馈整理为标准问题单的产品协作者
+地图类产品经理经常收到来自客服、应用商店、用户访谈、群聊和业务人员的零散反馈。这些反馈通常表述不统一，Bug、数据问题、需求和操作问题混杂在一起，还经常缺少设备、版本、地点和复现信息。
 
-## MVP 核心流程
+如果直接把这些内容交给研发或数据团队，往往还需要产品经理二次整理：识别产品模块、判断问题类型、补齐上下文、标记不确定性、整理成标准问题单。这个过程耗时，重要问题也容易被大量低质量反馈淹没。
+
+## 核心用户
+
+- 地图与导航产品经理
+- 航旅和智能交通产品经理
+- GIS 或 B 端平台产品经理
+- 用户反馈运营、客服和项目实施人员
+
+## 当前 MVP 流程
+
+单条模式：
 
 ```text
-用户输入反馈
-  -> AI 结构化诊断
-  -> 产品经理人工审核与修改
+原始反馈与截图附件
+  -> AI结构化诊断
+  -> 产品经理卡片式审核
   -> 人工确认
   -> 标准问题单生成
-  -> Markdown 复制或下载
+  -> Markdown下载
 ```
 
-当前 MVP 聚焦单条反馈处理，不做登录、数据库、历史后台、RAG、多 Agent 或工单平台集成。
+批量模式：
+
+```text
+多行反馈输入
+  -> 顺序调用模型诊断
+  -> 反馈总表
+  -> 筛选和批量确认
+  -> 选择重点问题
+  -> 导出反馈总表与问题单文件
+```
 
 ## 已实现功能
 
-- 单页工作台：反馈输入、环境补充、AI 诊断展示、人工审核、问题单生成在同一页面完成。
-- 结构化诊断接口：`POST /api/diagnose` 返回符合 Zod Schema 的诊断结果。
-- Mock 与 Gemini 双模式：默认可用 Mock 流程，本地无需模型密钥即可验证页面和构建。
-- 地图业务分类：支持产品模块、问题类型、严重程度、优先级、缺失信息等字段。
-- 事实与推测分离：用户明确事实、AI 推测、用户原话证据分开展示。
-- Human-in-the-loop：产品经理可以修改关键诊断字段，并显式确认审核结果。
-- 修改字段记录：系统会对比 AI 原始诊断和人工审核结果，记录被人工修改的字段。
-- 标准问题单生成：支持 Bug 单、数据问题单、产品需求单三类 Markdown 模板。
-- 导出能力：支持复制 Markdown、下载 `.md`、查看结构化 JSON。
+- 单条反馈和批量反馈两种模式
+- 批量模式最多 20 条反馈，按顺序处理，避免并发触发接口限流
+- DeepSeek 真实 API 模式和 Mock 模式
+- 产品模块与问题类型结构化分类
+- 对明确功能异常的确定性分类兜底，降低模型过度保守地输出“信息不足”的概率
+- 低置信度、待补充信息和不确定性表达
+- Human-in-the-loop 人工审核流程
+- 紧凑卡片式人工审核
+- 一键接受 AI 建议
+- 人工修改字段记录
+- 截图本地预览和附件名称记录
+- 批量反馈总表
+- 中文状态胶囊
+- CSV 下载
+- 选择文件夹导出反馈总表和已生成问题单
+- Bug 单、数据问题单和产品需求单 Markdown 生成
+- Golden Set、Badcase 记录和 Prompt 版本实验结构
 
-## Human-in-the-loop 设计
+## AI 产品设计
 
-系统会保留两份不同对象：
+这个项目的核心原则是：AI 只负责初步整理，不是最终决策者。
 
-- `diagnosis`：AI 原始诊断结果。
-- `reviewedDiagnosis`：产品经理人工审核后的结果。
+AI 会把原始反馈整理成结构化诊断，包括产品模块、问题类型、处理优先级、用户事实、AI 推测、待补充信息和不确定性。产品经理可以直接接受 AI 建议，也可以只修改少量字段后确认。
 
-问题单生成只使用 `reviewedDiagnosis`。当人工审核内容再次发生修改时，确认状态会回到 `reviewing`，问题单生成区会隐藏，必须重新确认后才能生成新的问题单。
+正式问题单必须在产品经理确认后才能生成，并且问题单使用的是人工确认后的结果，而不是 AI 原始结果。这样可以避免模型把未经确认的推测直接带入研发流程。
 
-确认时会记录：
+项目中也加入了少量确定性 Guardrail：当反馈明确描述“打不开、白屏、崩溃、一直加载”等功能失败时，会补充内部判断上下文，减少模型因为缺少设备、版本、复现信息而把明显异常归为“信息不足”的情况。模糊反馈则通过低置信度、待补充信息和不确定性表达。
 
-- `modifiedFields`：人工修改过的字段。
-- `confirmedAt`：人工确认时间。
+关于“信息不足”的处理需要区分两个阶段：Prompt V1 的历史 Golden Set 中包含“信息不足，暂时无法判断”这一标准分类，用于评估模型在缺少上下文时是否能承认不确定；当前正式产品页面会尽量给出最可能的问题类型，不把“信息不足”作为最终页面分类。比如“这个不好用”这类模糊反馈，页面会展示为“使用体验或操作问题”，同时用低置信度、待补充信息和不确定性说明当前信息不足。系统不会声称 AI 一定能准确判断所有模糊反馈。
 
-## Mock 与 Gemini 双模式
+截图当前只作为证据附件保留在浏览器本地，不上传服务器，不传给 DeepSeek，也不做 OCR 或多模态分析。当前数据只保存在浏览器内存中，不使用数据库。
 
-诊断接口保留两种运行模式：
+## 导出兼容性
 
-- Mock 模式：默认模式。只要 `USE_MOCK_AI` 不是明确的 `false`，系统就返回内置 Mock 诊断结果，不调用真实模型。
-- Gemini 模式：当 `USE_MOCK_AI=false` 时，服务端使用 OpenAI SDK 兼容接口调用 Gemini，需要配置 `GEMINI_API_KEY`。
+反馈总表可以直接下载为 CSV。选择文件夹导出功能依赖浏览器能力：Chrome、Edge 等支持 File System Access API 的浏览器可以让用户选择文件夹，并写入反馈总表和已生成的问题单；如果浏览器不支持该 API，或用户未授予目录写入权限，系统会降级为普通下载。
 
-Mock 模式适合本地开发、页面验证、人工审核和问题单生成流程验证。Gemini 模式用于真实模型诊断测试。
+网页不能绕过浏览器权限直接写入任意电脑目录，所有本地文件写入都必须经过用户主动选择和浏览器授权。
+
+## 评测结果
+
+以下结果来自 Prompt V1 的历史基线：
+
+- 测试集：15 条人工设计的 `synthetic_test_case`
+- Provider：DeepSeek
+- Model：`deepseek-v4-flash`
+- 模块分类准确率：13/15，86.67%
+- 问题类型准确率：15/15，100%
+- 格式合规率：15/15，100%
+- 平均接口处理耗时：8.52 秒
+- 明确信息虚构率：1/15，6.67%
+- 字段级人工修改率：22/165，13.33%
+
+这些指标只代表早期 Prompt V1 单条诊断版本在 15 条人工设计案例上的表现，不代表生产环境整体表现。8.52 秒是模型接口处理耗时，不是产品经理完成整个反馈整理任务的总时间。
+
+后续项目增加了确定性分类兜底和批量工作台，但尚未重新完成同等规模的人工复核，因此 README 不把这些改动包装成新的准确率提升。
+
+## Prompt 迭代复盘
+
+Prompt V1 被保留为当前稳定 Demo 版本。基于 V1 的 Badcase，V2 尝试修复模块分类、推测边界、备选问题类型和处理优先级建议等问题。
+
+回归测试发现，V2 虽然针对部分 Badcase 加了规则，但问题类型准确率出现下降。项目没有为了展示效果隐藏这个失败结果，也没有继续堆叠 Prompt 规则强行做 V3。正式 Demo 继续使用 V1，V2 实验保留在独立实验分支/版本中，后续更适合采用最小规则调整和更细的回归验证。
 
 ## 技术栈
 
-- Next.js App Router
+- Next.js 14
 - React
 - TypeScript
 - Tailwind CSS
 - Zod
-- OpenAI SDK
-- lucide-react
+- OpenAI 兼容 SDK
+- DeepSeek API
+- Git / GitHub
 
 ## 本地运行
 
-Windows PowerShell 环境中，优先使用 `.cmd` 命令，避免系统拦截 `npm.ps1` 或 `npx.ps1`。
+Windows PowerShell 环境优先使用 `.cmd` 命令，避免系统拦截 `npm.ps1` 或 `npx.ps1`。
 
-1. 安装依赖：
+```powershell
+npm.cmd install
+npm.cmd run dev
+npx.cmd tsc --noEmit
+npm.cmd run build
+```
 
-   ```powershell
-   npm.cmd install
-   ```
+开发服务器启动后访问：
 
-2. 启动开发服务器：
+```text
+http://localhost:3000
+```
 
-   ```powershell
-   npm.cmd run dev
-   ```
-
-3. 打开本地页面：
-
-   ```text
-   http://localhost:3000
-   ```
-
-4. 类型检查：
-
-   ```powershell
-   npx.cmd tsc --noEmit
-   ```
-
-5. 生产构建：
-
-   ```powershell
-   npm.cmd run build
-   ```
-
-## 环境变量配置
-
-可参考 `.env.example`。
-
-Mock 模式：
+环境变量示例：
 
 ```env
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-v4-flash
 USE_MOCK_AI=true
+PROMPT_VERSION=v1
 ```
 
-或不设置 `USE_MOCK_AI`，系统也会默认使用 Mock 模式。
+不要把真实 API Key 写入仓库。
 
-Gemini 模式：
-
-```env
-USE_MOCK_AI=false
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_MODEL=gemini-2.5-flash
-```
-
-不要把真实密钥提交到 Git 仓库。
-
-## 项目目录说明
+## 项目目录
 
 ```text
 app/
-  page.tsx                    单页工作台
-  api/diagnose/route.ts        诊断接口，支持 Mock 与 Gemini 模式
+  Next.js 页面和服务端 API，包括主工作台和 /api/diagnose。
 
 components/
-  human-review-form.tsx        产品经理人工审核表单
-  ticket-generator.tsx         标准问题单生成、预览与导出
+  前端交互组件，包括批量反馈表、人工审核、状态胶囊和问题单生成。
 
 lib/
-  diagnosis.ts                 反馈输入与诊断结果 Schema
-  review.ts                    人工审核副本与修改字段计算
-  ticket.ts                    确定性问题单生成逻辑
-  prompts/diagnosis-prompt.ts  运行时 Prompt V1
+  业务类型、Schema、问题单模板、导出逻辑、显示标签和分类兜底规则。
 
 prompts/
-  prompt_v1.md                 Prompt V1 文档版
+  Prompt 文档版本，用于说明和追溯 Prompt 迭代。
 
 eval/
-  golden_set.json              待完成：Golden Set 数据
-  evaluation_results.csv       待完成：评测结果记录
-  BADCASES.md                  待完成：Badcase 记录
+  Golden Set、自动评测脚本输出、人工复核、Baseline 和 Badcase 记录。
+
+scripts/
+  本地评测脚本，例如 Golden Set 自动评测。
 
 docs/
-  PRD.md
-  DESIGN.md
-  ARCHITECTURE.md
+  PRD、设计文档、架构文档和求职展示材料。
 ```
 
-## 当前项目状态
+## 项目边界
 
-已完成：
+当前 MVP 不做：
 
-- 地图反馈输入与基础校验
-- AI 结构化诊断 Schema
-- Prompt V1
-- Mock 诊断流程
-- Gemini 模式接入
-- AI 诊断结果展示
-- 人工审核与修改记录
-- 人工确认后的三类问题单生成
-- Markdown 复制、下载和 JSON 查看
-- 无模型密钥的本地构建验证
+- 登录
+- 数据库
+- 多人协作
+- 自动相似反馈聚类
+- RAG
+- 多 Agent
+- Jira 或飞书集成
+- AI 截图识别
+- 生产级权限和审计
 
-待完成：
+这些能力不是没有价值，而是会把 MVP 从“反馈整理工作流验证”扩展成平台化系统。当前阶段优先保证核心数据流清楚、人工审核可控、评测结果可追溯。
 
-- Golden Set 样例补充
-- Badcase 记录与评测结果维护
-- 截图上传与多模态理解能力
-- 更完整的缺失信息编辑体验
-- README 中补充真实部署说明，前提是已有实际部署地址
-- 基于真实测试结果迭代 Prompt V2 或 V3
+## 开源来源
 
-## 后续计划
+项目技术骨架参考 OpenAI Structured Outputs Sample 改造，并保留 MIT 许可证。
 
-- 建立首批 Golden Set，记录来源与人工标准答案。
-- 使用 Prompt V1 跑评测，记录分类错误、格式错误和信息虚构 Badcase。
-- 基于真实 Badcase 决定是否更新 Prompt V2。
-- 完善缺失信息补充和问题单模板字段。
-- 在完成真实部署后补充在线 Demo 地址。
-
-以上计划不会预设准确率、用户数量、节省时间比例或未完成的测试结论。
-
-## 开源来源说明
-
-本项目技术骨架基于 OpenAI Structured Outputs Sample 改造，并保留原始 MIT 许可证。
-
-在此基础上，地图业务分类体系、Prompt、Human-in-the-loop 人工审核流程、标准问题单生成逻辑和评测体系为 GeoFeedback Agent 项目独立设计。
+地图业务分类、Human-in-the-loop 流程、批量工作台、问题单生成、Golden Set 和评测体系为 GeoFeedback Agent 项目独立设计。项目不会声称所有代码从零编写，也不会把开源骨架复用包装成产品创新本身。
