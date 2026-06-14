@@ -1,4 +1,5 @@
 import type { DiagnosisResult } from '@/lib/diagnosis'
+import { normalizePrioritySuggestion } from '@/lib/priority-normalization'
 
 /**
  * MVP阶段允许产品经理修改的字段。
@@ -33,9 +34,12 @@ export type ReviewStatus =
  * 不能直接修改AI原始结果，否则后面无法计算人工修改率。
  */
 export function createReviewedDiagnosis(
-  diagnosis: DiagnosisResult
+  diagnosis: DiagnosisResult,
+  options: {
+    feedbackText?: string
+  } = {}
 ): DiagnosisResult {
-  return {
+  const reviewed = {
     ...diagnosis,
     userFacts: [...diagnosis.userFacts],
     aiInferences: [...diagnosis.aiInferences],
@@ -44,6 +48,18 @@ export function createReviewedDiagnosis(
       ...item
     }))
   }
+
+  if (options.feedbackText) {
+    reviewed.prioritySuggestion = normalizePrioritySuggestion({
+      feedbackText: options.feedbackText,
+      productModule: diagnosis.productModule,
+      issueType: diagnosis.issueType,
+      prioritySuggestion: diagnosis.prioritySuggestion,
+      confidenceLevel: diagnosis.confidenceLevel
+    })
+  }
+
+  return reviewed
 }
 
 /**
@@ -57,4 +73,16 @@ export function getModifiedFields(
   return REVIEWABLE_FIELDS.filter(
     field => original[field] !== reviewed[field]
   )
+}
+
+export function getHumanModifiedFields(
+  original: DiagnosisResult,
+  reviewed: DiagnosisResult,
+  feedbackText: string
+): ReviewableField[] {
+  const baseline = createReviewedDiagnosis(original, {
+    feedbackText
+  })
+
+  return getModifiedFields(baseline, reviewed)
 }

@@ -8,6 +8,7 @@ import {
   saveFeedbackMasterCsv
 } from '@/lib/export-feedback'
 import {
+  displayPrioritySuggestion,
   displayIssueType,
   processingStatusLabel,
   processingStatusTone,
@@ -18,7 +19,10 @@ import {
 } from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
 import type { FeedbackInput } from '@/lib/diagnosis'
-import { getModifiedFields } from '@/lib/review'
+import {
+  createReviewedDiagnosis,
+  getHumanModifiedFields
+} from '@/lib/review'
 import type { GeneratedTicket } from '@/lib/ticket'
 import {
   CheckCircle2,
@@ -57,7 +61,7 @@ export default function FeedbackBatchTable({
   const [issueTypeFilter, setIssueTypeFilter] = useState('')
   const [reviewStatusFilter, setReviewStatusFilter] =
     useState('')
-  const [pendingOnly, setPendingOnly] = useState(false)
+  const [highPriorityOnly, setHighPriorityOnly] = useState(false)
   const [exportMessage, setExportMessage] = useState('')
 
   const moduleOptions = uniqueValues(
@@ -84,15 +88,14 @@ export default function FeedbackBatchTable({
     const matchesReview =
       !reviewStatusFilter ||
       record.reviewStatus === reviewStatusFilter
-    const matchesPending =
-      !pendingOnly ||
-      diagnosis?.prioritySuggestion === '待人工判断'
+    const matchesHighPriority =
+      !highPriorityOnly || diagnosis?.prioritySuggestion === 'P1'
 
     return (
       matchesModule &&
       matchesIssueType &&
       matchesReview &&
-      matchesPending
+      matchesHighPriority
     )
   })
 
@@ -111,9 +114,10 @@ export default function FeedbackBatchTable({
 
       return (
         record.reviewStatus !== 'confirmed' &&
-        getModifiedFields(
+        getHumanModifiedFields(
           record.diagnosis,
-          record.reviewedDiagnosis
+          record.reviewedDiagnosis,
+          record.rawFeedback
         ).length === 0
       )
     })
@@ -217,12 +221,12 @@ export default function FeedbackBatchTable({
           <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <input
               type="checkbox"
-              checked={pendingOnly}
+              checked={highPriorityOnly}
               onChange={event =>
-                setPendingOnly(event.target.checked)
+                setHighPriorityOnly(event.target.checked)
               }
             />
-            仅看待人工判断
+            仅看P1高优先级
           </label>
         </div>
 
@@ -343,10 +347,13 @@ export default function FeedbackBatchTable({
                     <td className="border-b border-slate-100 px-3 py-3">
                       {diagnosis?.prioritySuggestion ? (
                         <StatusBadge
-                          label={diagnosis.prioritySuggestion}
+                          label={displayPrioritySuggestion(
+                            diagnosis.prioritySuggestion
+                          )}
                           tone={
-                            diagnosis.prioritySuggestion ===
-                            '待人工判断'
+                            displayPrioritySuggestion(
+                              diagnosis.prioritySuggestion
+                            ) === 'P1'
                               ? 'orange'
                               : 'blue'
                           }
@@ -403,7 +410,12 @@ export default function FeedbackBatchTable({
 
             <div className="space-y-5">
               <HumanReviewForm
-                original={selectedRecord.diagnosis}
+                original={createReviewedDiagnosis(
+                  selectedRecord.diagnosis,
+                  {
+                    feedbackText: selectedRecord.rawFeedback
+                  }
+                )}
                 value={selectedRecord.reviewedDiagnosis}
                 reviewStatus={selectedRecord.reviewStatus}
                 onChange={next =>
@@ -411,9 +423,10 @@ export default function FeedbackBatchTable({
                     ...record,
                     reviewedDiagnosis: next,
                     reviewStatus: 'reviewing',
-                    modifiedFields: getModifiedFields(
+                    modifiedFields: getHumanModifiedFields(
                       selectedRecord.diagnosis!,
-                      next
+                      next,
+                      selectedRecord.rawFeedback
                     ),
                     ticketMarkdown: '',
                     ticketType: null,
@@ -423,7 +436,12 @@ export default function FeedbackBatchTable({
                 onReset={() =>
                   onUpdateRecord(selectedRecord.id, record => ({
                     ...record,
-                    reviewedDiagnosis: selectedRecord.diagnosis,
+                    reviewedDiagnosis: createReviewedDiagnosis(
+                      selectedRecord.diagnosis!,
+                      {
+                        feedbackText: selectedRecord.rawFeedback
+                      }
+                    ),
                     reviewStatus: 'reviewing',
                     modifiedFields: [],
                     ticketMarkdown: '',
@@ -435,9 +453,10 @@ export default function FeedbackBatchTable({
                   onUpdateRecord(selectedRecord.id, record => ({
                     ...record,
                     reviewStatus: 'confirmed',
-                    modifiedFields: getModifiedFields(
+                    modifiedFields: getHumanModifiedFields(
                       selectedRecord.diagnosis!,
-                      selectedRecord.reviewedDiagnosis!
+                      selectedRecord.reviewedDiagnosis!,
+                      selectedRecord.rawFeedback
                     ),
                     processingStatus: 'confirmed'
                   }))
@@ -500,9 +519,13 @@ function CompactDiagnosisCard({
           <p className="text-xs text-slate-500">处理优先级</p>
           <div className="mt-1">
             <StatusBadge
-              label={diagnosis.prioritySuggestion}
+              label={displayPrioritySuggestion(
+                diagnosis.prioritySuggestion
+              )}
               tone={
-                diagnosis.prioritySuggestion === '待人工判断'
+                displayPrioritySuggestion(
+                  diagnosis.prioritySuggestion
+                ) === 'P1'
                   ? 'orange'
                   : 'blue'
               }
@@ -659,9 +682,9 @@ function buildBatchOverview(records: FeedbackRecord[]) {
         diagnosis?.issueType === '使用咨询或操作问题' ||
         diagnosis?.issueType === '信息不足，暂时无法判断'
     ).length,
-    待人工判断数量: diagnoses.filter(
+    P1高优先级数量: diagnoses.filter(
       diagnosis =>
-        diagnosis?.prioritySuggestion === '待人工判断'
+        diagnosis?.prioritySuggestion === 'P1'
     ).length,
     已确认数量: records.filter(
       record => record.reviewStatus === 'confirmed'

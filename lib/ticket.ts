@@ -4,6 +4,7 @@ import type {
   MissingInformationItem
 } from '@/lib/diagnosis'
 import { displayIssueType } from '@/lib/display-labels'
+import { normalizePrioritySuggestion } from '@/lib/priority-normalization'
 
 export type TicketType =
   | 'bug'
@@ -138,7 +139,10 @@ function buildCommonData({
     userScenario: normalizeValue(diagnosis.userScenario),
     actualResult: normalizeValue(diagnosis.actualResult),
     expectedResult: normalizeValue(diagnosis.expectedResult),
-    prioritySuggestion: normalizeValue(diagnosis.prioritySuggestion),
+    prioritySuggestion: normalizeTicketPriority(
+      diagnosis,
+      feedbackInput
+    ),
     missingInformation: diagnosis.missingInformation,
     uncertainty: normalizeValue(diagnosis.uncertainty),
     recommendedNextAction: normalizeValue(
@@ -273,6 +277,23 @@ function productAndEnvironment(data: CommonTicketData): string {
     line('发生地点', data.environment.location),
     line('其他补充', data.environment.additionalContext)
   ].join('\n')
+}
+
+function normalizeTicketPriority(
+  diagnosis: DiagnosisResult,
+  feedbackInput: FeedbackInput
+): string {
+  if (diagnosis.prioritySuggestion === 'P0') {
+    return 'P0'
+  }
+
+  return normalizePrioritySuggestion({
+    feedbackText: feedbackInput.feedbackText,
+    productModule: diagnosis.productModule,
+    issueType: diagnosis.issueType,
+    prioritySuggestion: diagnosis.prioritySuggestion,
+    confidenceLevel: diagnosis.confidenceLevel
+  })
 }
 
 function sharedEvidence(data: CommonTicketData): string {

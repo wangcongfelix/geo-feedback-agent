@@ -9,13 +9,14 @@ import type {
   FeedbackInput
 } from '@/lib/diagnosis'
 import {
+  displayPrioritySuggestion,
   displayIssueType,
   priorityTone
 } from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
 import {
   createReviewedDiagnosis,
-  getModifiedFields,
+  getHumanModifiedFields,
   type ReviewStatus
 } from '@/lib/review'
 import {
@@ -220,7 +221,11 @@ export default function GeoFeedbackPage() {
       const result = await diagnoseFeedback(currentFeedbackInput)
 
       setDiagnosis(result.data)
-      setReviewedDiagnosis(createReviewedDiagnosis(result.data))
+      setReviewedDiagnosis(
+        createReviewedDiagnosis(result.data, {
+          feedbackText: currentFeedbackInput.feedbackText
+        })
+      )
       setReviewStatus('reviewing')
       setProvider(result.meta?.provider ?? '')
       setModel(result.meta?.model ?? '')
@@ -288,7 +293,9 @@ export default function GeoFeedbackPage() {
 
       try {
         const result = await diagnoseFeedback(input)
-        const reviewed = createReviewedDiagnosis(result.data)
+        const reviewed = createReviewedDiagnosis(result.data, {
+          feedbackText: input.feedbackText
+        })
 
         updateBatchRecord(record.id, current => ({
           ...current,
@@ -357,9 +364,10 @@ export default function GeoFeedbackPage() {
           ...record,
           reviewStatus: 'confirmed',
           processingStatus: 'confirmed',
-          modifiedFields: getModifiedFields(
+          modifiedFields: getHumanModifiedFields(
             record.diagnosis,
-            record.reviewedDiagnosis
+            record.reviewedDiagnosis,
+            record.rawFeedback
           ),
           processedAt: confirmedAt
         }
@@ -513,13 +521,16 @@ export default function GeoFeedbackPage() {
                 ) : diagnosis && reviewedDiagnosis ? (
                   <div className="space-y-8">
                     <DiagnosisResultState
-                      diagnosis={diagnosis}
+                      diagnosis={reviewedDiagnosis}
                       provider={provider}
                       model={model}
                     />
 
                     <HumanReviewForm
-                      original={diagnosis}
+                      original={createReviewedDiagnosis(diagnosis, {
+                        feedbackText:
+                          currentFeedbackInput.feedbackText
+                      })}
                       value={reviewedDiagnosis}
                       reviewStatus={reviewStatus}
                       onChange={nextValue => {
@@ -529,16 +540,20 @@ export default function GeoFeedbackPage() {
                       }}
                       onReset={() => {
                         setReviewedDiagnosis(
-                          createReviewedDiagnosis(diagnosis)
+                          createReviewedDiagnosis(diagnosis, {
+                            feedbackText:
+                              currentFeedbackInput.feedbackText
+                          })
                         )
                         setReviewStatus('reviewing')
                         setConfirmedReview(null)
                       }}
                       onConfirm={() => {
                         setConfirmedReview({
-                          modifiedFields: getModifiedFields(
+                          modifiedFields: getHumanModifiedFields(
                             diagnosis,
-                            reviewedDiagnosis
+                            reviewedDiagnosis,
+                            currentFeedbackInput.feedbackText
                           ),
                           confirmedAt: new Date().toISOString()
                         })
@@ -1327,7 +1342,9 @@ function DiagnosisResultState({
           </p>
           <div className="mt-2">
             <StatusBadge
-              label={diagnosis.prioritySuggestion}
+              label={displayPrioritySuggestion(
+                diagnosis.prioritySuggestion
+              )}
               tone={priorityTone(diagnosis.prioritySuggestion)}
             />
           </div>
