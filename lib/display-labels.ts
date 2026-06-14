@@ -78,3 +78,7 @@ export function priorityTone(
 ): StatusTone {
   return priority === '待人工判断' ? 'orange' : 'blue'
 }
+
+export function displayPrioritySuggestion(priority: string): string {
+  return priority === '待人工判断' ? 'P3' : priority || '-'
+}

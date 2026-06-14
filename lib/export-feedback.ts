@@ -5,6 +5,7 @@ import {
   ticketStatusLabel
 } from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
+import { normalizePrioritySuggestion } from '@/lib/priority-normalization'
 
 const CSV_COLUMNS = [
   'feedback_id',
@@ -53,7 +54,7 @@ export function buildFeedbackMasterCsv(
       alternative_issue_type: displayIssueType(
         diagnosis?.alternativeIssueType ?? ''
       ),
-      priority: diagnosis?.prioritySuggestion ?? '',
+      priority: diagnosis ? getExportPriority(record, diagnosis) : '',
       confidence: diagnosis?.confidenceLevel ?? '',
       pending_information_count: String(
         diagnosis?.missingInformation.length ?? ''
@@ -182,6 +183,26 @@ function buildTicketFilename(record: FeedbackRecord): string {
   const type = record.ticketType ?? 'ticket'
 
   return `${record.id}_${type}.md`
+}
+
+function getExportPriority(
+  record: FeedbackRecord,
+  diagnosis: NonNullable<FeedbackRecord['diagnosis']>
+): string {
+  if (
+    record.reviewedDiagnosis?.prioritySuggestion === 'P0' &&
+    record.modifiedFields.includes('prioritySuggestion')
+  ) {
+    return 'P0'
+  }
+
+  return normalizePrioritySuggestion({
+    feedbackText: record.rawFeedback,
+    productModule: diagnosis.productModule,
+    issueType: diagnosis.issueType,
+    prioritySuggestion: diagnosis.prioritySuggestion,
+    confidenceLevel: diagnosis.confidenceLevel
+  })
 }
 
 async function writeFileToDirectory(

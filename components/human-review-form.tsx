@@ -2,11 +2,11 @@
 
 import {
   IssueTypeSchema,
-  PrioritySchema,
   ProductModuleSchema,
   type DiagnosisResult
 } from '@/lib/diagnosis'
 import {
+  displayPrioritySuggestion,
   displayIssueType,
   priorityTone,
   reviewStatusLabel,
@@ -18,7 +18,6 @@ import {
   type ReviewStatus
 } from '@/lib/review'
 import {
-  AlertTriangle,
   CheckCircle2,
   PencilLine,
   RotateCcw,
@@ -73,7 +72,7 @@ const reviewFields: ReviewFieldConfig[] = [
     field: 'prioritySuggestion',
     label: '处理优先级',
     type: 'select',
-    options: PrioritySchema.options,
+    options: ['P0', 'P1', 'P2', 'P3'],
     compact: true
   },
   {
@@ -92,9 +91,6 @@ export default function HumanReviewForm({
   onReset
 }: HumanReviewFormProps) {
   const modifiedFields = getModifiedFields(original, value)
-  const hasPendingJudgment =
-    value.prioritySuggestion === '待人工判断'
-
   function updateField<K extends keyof DiagnosisResult>(
     field: K,
     nextValue: DiagnosisResult[K]
@@ -145,18 +141,6 @@ export default function HumanReviewForm({
           </button>
         </div>
       </div>
-
-      {hasPendingJudgment && (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
-
-            <p className="text-sm leading-6 text-amber-800">
-              当前信息不足，可保留待人工判断后继续生成问题单。
-            </p>
-          </div>
-        </div>
-      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3">
         <p className="text-sm text-slate-600">
@@ -460,7 +444,10 @@ function ReviewFieldCard({
             config.field === 'prioritySuggestion' ? (
               <div className="mt-2">
                 <StatusBadge
-                  label={displayValue || '待补充'}
+                  label={
+                    displayPrioritySuggestion(displayValue) ||
+                    '待补充'
+                  }
                   tone={priorityTone(displayValue)}
                 />
               </div>
@@ -499,6 +486,9 @@ function ReviewFieldCard({
                 <option key={option} value={option}>
                   {config.field === 'issueType'
                     ? displayIssueType(option)
+                    : config.field === 'prioritySuggestion' &&
+                        option === 'P0'
+                      ? 'P0（仅人工用于最高紧急情况）'
                     : option}
                 </option>
               ))}
