@@ -4,6 +4,28 @@
 
 GeoFeedback Agent 帮助地图、导航、航旅、智能交通和 GIS 产品经理，将一批非结构化用户反馈转化为可筛选、可审核、可导出的结构化反馈清单，并为需要进入研发流程的问题生成标准问题单。
 
+## 在线体验
+
+* Vercel Demo：https://geo-feedback-agent.vercel.app
+* GitHub Repository：https://github.com/wangcongfelix/geo-feedback-agent
+
+> 在线版本使用 DeepSeek API。反馈数据仅保存在当前浏览器页面内存中，截图不会上传服务器，也不会发送给模型。
+
+## 产品截图
+
+### 单条反馈诊断
+
+![单条反馈诊断](public/screenshots/01-single-diagnosis.png)
+
+### 产品经理人工审核
+
+![产品经理人工审核](public/screenshots/02-human-review.png)
+
+### 批量反馈整理工作台
+
+![批量反馈整理工作台](public/screenshots/03-batch-workbench.png)
+
+
 ## 项目背景
 
 地图类产品经理经常收到来自客服、应用商店、用户访谈、群聊和业务人员的零散反馈。这些反馈通常表述不统一，Bug、数据问题、需求和操作问题混杂在一起，还经常缺少设备、版本、地点和复现信息。
