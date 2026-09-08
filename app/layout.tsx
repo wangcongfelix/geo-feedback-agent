@@ -14,9 +14,9 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'GeoFeedback Agent',
+  title: 'GeoFeedback Agent v3.0',
   description:
-    '地图产品用户反馈诊断与标准问题单生成工具',
+    '将微信截图沉淀为可追溯反馈档案的产品经理工作台',
   icons: {
     icon: '/imgs/convex_icon.svg'
   }
@@ -28,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body className={`${geistSans.variable} ${geistMono.variable} `}>
         <div className="bg-gray-200 text-stone-900">
           <main>{children}</main>

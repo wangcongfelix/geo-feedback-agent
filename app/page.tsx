@@ -1,6 +1,7 @@
 'use client'
 
 import FeedbackBatchTable from '@/components/feedback-batch-table'
+import FeedbackArchiveDashboard from '@/components/feedback-archive-dashboard'
 import HumanReviewForm from '@/components/human-review-form'
 import StatusBadge from '@/components/status-badge'
 import TicketGenerator from '@/components/ticket-generator'
@@ -15,6 +16,11 @@ import {
 } from '@/lib/display-labels'
 import type { FeedbackRecord } from '@/lib/feedback-record'
 import {
+  initialArchiveRecords,
+  toArchiveFeedbackType,
+  type FeedbackArchiveRecord
+} from '@/lib/feedback-archive'
+import {
   createReviewedDiagnosis,
   getHumanModifiedFields,
   type ReviewStatus
@@ -22,19 +28,21 @@ import {
 import {
   AlertCircle,
   CheckCircle2,
+  ClipboardPaste,
   ImageIcon,
   Layers3,
   LoaderCircle,
   MapPinned,
   RefreshCw,
   ShieldCheck,
+  ScanText,
   Sparkles,
   Trash2,
   Upload
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-type WorkMode = 'single' | 'batch'
+type WorkMode = 'archive' | 'single' | 'batch'
 
 type DiagnoseApiResponse =
   | {
@@ -59,7 +67,17 @@ type ScreenshotAttachment = {
   name: string
   size: number
   previewUrl: string
+  file: File
 }
+
+type AvatarSide = 'left' | 'right'
+
+type RecognitionStage =
+  | 'idle'
+  | 'recognizing'
+  | 'analyzing'
+  | 'done'
+  | 'error'
 
 const productTypes = [
   '地图App',
@@ -81,9 +99,10 @@ const screenshotTypes = [
 ]
 const screenshotMaxSizeBytes = 5 * 1024 * 1024
 const batchDelayMs = 1000
+const archiveStorageKey = 'geo-feedback-archive-v2'
 
 export default function GeoFeedbackPage() {
-  const [mode, setMode] = useState<WorkMode>('single')
+  const [mode, setMode] = useState<WorkMode>('archive')
   const [feedbackText, setFeedbackText] = useState('')
   const [batchText, setBatchText] = useState('')
   const [productName, setProductName] = useState('')
@@ -93,6 +112,13 @@ export default function GeoFeedbackPage() {
   const [occurredAt, setOccurredAt] = useState('')
   const [location, setLocation] = useState('')
   const [additionalContext, setAdditionalContext] = useState('')
+  const [userNote, setUserNote] = useState('')
+  const [avatarDataUrl, setAvatarDataUrl] = useState('')
+  const [avatarSide, setAvatarSide] = useState<AvatarSide>('left')
+  const [avatarVerticalPosition, setAvatarVerticalPosition] =
+    useState(32)
+  const [avatarCropLoading, setAvatarCropLoading] = useState(false)
+  const avatarCropRequestRef = useRef(0)
 
   const [diagnosis, setDiagnosis] =
     useState<DiagnosisResult | null>(null)
@@ -112,6 +138,14 @@ export default function GeoFeedbackPage() {
   const [screenshotAttachment, setScreenshotAttachment] =
     useState<ScreenshotAttachment | null>(null)
   const [screenshotError, setScreenshotError] = useState('')
+  const [recognitionStage, setRecognitionStage] =
+    useState<RecognitionStage>('idle')
+  const [recognitionProgress, setRecognitionProgress] = useState(0)
+  const [archiveRecords, setArchiveRecords] = useState<
+    FeedbackArchiveRecord[]
+  >(initialArchiveRecords)
+  const [archiveStorageReady, setArchiveStorageReady] = useState(false)
+  const [activeArchiveId, setActiveArchiveId] = useState('')
 
   const [batchRecords, setBatchRecords] = useState<
     FeedbackRecord[]
@@ -157,6 +191,39 @@ export default function GeoFeedbackPage() {
       }
     }
   }, [screenshotAttachment])
+
+  useEffect(() => {
+    try {
+      const storedRecords = window.localStorage.getItem(
+        archiveStorageKey
+      )
+
+      if (storedRecords) {
+        const parsed = JSON.parse(storedRecords) as unknown
+
+        if (Array.isArray(parsed)) {
+          setArchiveRecords(parsed as FeedbackArchiveRecord[])
+        }
+      }
+    } catch (error) {
+      console.warn('Feedback archive restore failed:', error)
+    } finally {
+      setArchiveStorageReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!archiveStorageReady) return
+
+    try {
+      window.localStorage.setItem(
+        archiveStorageKey,
+        JSON.stringify(archiveRecords)
+      )
+    } catch (error) {
+      console.warn('Feedback archive persistence failed:', error)
+    }
+  }, [archiveRecords, archiveStorageReady])
 
   function markDiagnosisOutdated() {
     if (diagnosis) {
@@ -219,22 +286,131 @@ export default function GeoFeedbackPage() {
 
     try {
       const result = await diagnoseFeedback(currentFeedbackInput)
-
-      setDiagnosis(result.data)
-      setReviewedDiagnosis(
-        createReviewedDiagnosis(result.data, {
-          feedbackText: currentFeedbackInput.feedbackText
-        })
-      )
-      setReviewStatus('reviewing')
-      setProvider(result.meta?.provider ?? '')
-      setModel(result.meta?.model ?? '')
+      applyDiagnosisResult(result, currentFeedbackInput)
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
           : '诊断请求失败，请稍后重试'
       )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function applyDiagnosisResult(
+    result: Extract<DiagnoseApiResponse, { success: true }>,
+    input: FeedbackInput
+  ) {
+    setDiagnosis(result.data)
+    setReviewedDiagnosis(
+      createReviewedDiagnosis(result.data, {
+        feedbackText: input.feedbackText
+      })
+    )
+    setReviewStatus('reviewing')
+    setProvider(result.meta?.provider ?? '')
+    setModel(result.meta?.model ?? '')
+  }
+
+  async function handleRecognizeAndDiagnose() {
+    if (!screenshotAttachment || loading) return
+
+    setLoading(true)
+    setErrorMessage('')
+    setScreenshotError('')
+    setRecognitionStage('recognizing')
+    setRecognitionProgress(0)
+    setDiagnosis(null)
+    setReviewedDiagnosis(null)
+    setReviewStatus('not_reviewed')
+    setConfirmedReview(null)
+    setProvider('')
+    setModel('')
+
+    try {
+      const tesseract = await import('tesseract.js')
+      const worker = await tesseract.createWorker(
+        ['chi_sim', 'eng'],
+        tesseract.OEM.LSTM_ONLY,
+        {
+          logger: message => {
+            if (message.status === 'recognizing text') {
+              setRecognitionProgress(
+                Math.round(message.progress * 100)
+              )
+            }
+          }
+        }
+      )
+
+      let recognizedText = ''
+
+      try {
+        const result = await worker.recognize(
+          screenshotAttachment.file
+        )
+        recognizedText = normalizeRecognizedText(result.data.text)
+      } finally {
+        await worker.terminate()
+      }
+
+      if (recognizedText.length < 2) {
+        throw new Error(
+          '没有识别到清晰文字，请换一张更清晰的截图后重试。'
+        )
+      }
+
+      setFeedbackText(recognizedText)
+      setRecognitionStage('analyzing')
+
+      const input: FeedbackInput = {
+        ...optionalContext,
+        feedbackText: recognizedText
+      }
+      const diagnosisResult = await diagnoseFeedback(input)
+
+      applyDiagnosisResult(diagnosisResult, input)
+
+      const screenshotDataUrl = await createScreenshotThumbnail(
+        screenshotAttachment.file
+      )
+      const resolvedAvatarDataUrl =
+        avatarDataUrl ||
+        (await createAvatarCrop(
+          screenshotAttachment.file,
+          avatarSide,
+          avatarVerticalPosition
+        ))
+
+      if (!avatarDataUrl) setAvatarDataUrl(resolvedAvatarDataUrl)
+
+      const archiveRecord = createScreenshotArchiveRecord({
+        userNote,
+        avatarDataUrl: resolvedAvatarDataUrl,
+        occurredAt,
+        screenshotName: screenshotAttachment.name,
+        screenshotDataUrl,
+        feedbackText: recognizedText,
+        diagnosis: diagnosisResult.data
+      })
+
+      setArchiveRecords(records => [
+        archiveRecord,
+        ...records.filter(record => record.id !== archiveRecord.id)
+      ])
+      setActiveArchiveId(archiveRecord.id)
+      setRecognitionStage('done')
+      setRecognitionProgress(100)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : '截图识别失败，请稍后重试。'
+
+      setRecognitionStage('error')
+      setScreenshotError(message)
+      setErrorMessage(message)
     } finally {
       setLoading(false)
     }
@@ -399,8 +575,79 @@ export default function GeoFeedbackPage() {
     setScreenshotAttachment({
       name: file.name,
       size: file.size,
-      previewUrl: URL.createObjectURL(file)
+      previewUrl: URL.createObjectURL(file),
+      file
     })
+    setAvatarSide('left')
+    setAvatarVerticalPosition(32)
+    setAvatarDataUrl('')
+    void refreshAvatarCrop(file, 'left', 32)
+    setRecognitionStage('idle')
+    setRecognitionProgress(0)
+    setActiveArchiveId('')
+    markDiagnosisOutdated()
+
+    if (!occurredAt) {
+      setOccurredAt(
+        toDatetimeLocalValue(
+          new Date(file.lastModified || Date.now())
+        )
+      )
+    }
+  }
+
+  async function refreshAvatarCrop(
+    file: File,
+    side: AvatarSide,
+    verticalPosition: number
+  ) {
+    const requestId = avatarCropRequestRef.current + 1
+    avatarCropRequestRef.current = requestId
+    setAvatarCropLoading(true)
+
+    try {
+      const crop = await createAvatarCrop(
+        file,
+        side,
+        verticalPosition
+      )
+
+      if (avatarCropRequestRef.current === requestId) {
+        setAvatarDataUrl(crop)
+      }
+    } catch {
+      if (avatarCropRequestRef.current === requestId) {
+        setAvatarDataUrl('')
+      }
+    } finally {
+      if (avatarCropRequestRef.current === requestId) {
+        setAvatarCropLoading(false)
+      }
+    }
+  }
+
+  function handleAvatarSideChange(side: AvatarSide) {
+    setAvatarSide(side)
+
+    if (screenshotAttachment) {
+      void refreshAvatarCrop(
+        screenshotAttachment.file,
+        side,
+        avatarVerticalPosition
+      )
+    }
+  }
+
+  function handleAvatarVerticalPositionChange(value: number) {
+    setAvatarVerticalPosition(value)
+
+    if (screenshotAttachment) {
+      void refreshAvatarCrop(
+        screenshotAttachment.file,
+        avatarSide,
+        value
+      )
+    }
   }
 
   function handleRemoveScreenshot() {
@@ -409,7 +656,51 @@ export default function GeoFeedbackPage() {
     }
 
     setScreenshotAttachment(null)
+    avatarCropRequestRef.current += 1
+    setAvatarDataUrl('')
+    setAvatarCropLoading(false)
     setScreenshotError('')
+    setRecognitionStage('idle')
+    setRecognitionProgress(0)
+    setActiveArchiveId('')
+  }
+
+  function handleConfirmReview() {
+    if (!diagnosis || !reviewedDiagnosis) return
+
+    const confirmedAt = new Date().toISOString()
+    const modifiedFields = getHumanModifiedFields(
+      diagnosis,
+      reviewedDiagnosis,
+      currentFeedbackInput.feedbackText
+    )
+
+    setConfirmedReview({
+      modifiedFields,
+      confirmedAt
+    })
+    setReviewStatus('confirmed')
+
+    if (activeArchiveId) {
+      setArchiveRecords(records =>
+        records.map(record =>
+          record.id === activeArchiveId
+            ? {
+                ...record,
+                suggestion: currentFeedbackInput.feedbackText,
+                userNote: userNote.trim(),
+                avatarDataUrl: avatarDataUrl || record.avatarDataUrl,
+                initials: getArchiveInitials(userNote),
+                type: toArchiveFeedbackType(
+                  reviewedDiagnosis.issueType
+                ),
+                module: reviewedDiagnosis.productModule,
+                status: '已确认'
+              }
+            : record
+        )
+      )
+    }
   }
 
   return (
@@ -433,7 +724,7 @@ export default function GeoFeedbackPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
-              Prompt V1
+              v3.0
             </span>
             <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
               <ShieldCheck className="h-3.5 w-3.5" />
@@ -446,7 +737,14 @@ export default function GeoFeedbackPage() {
       <div className="mx-auto max-w-[1440px] p-6">
         <ModeSwitch mode={mode} onChange={setMode} />
 
-        {mode === 'single' ? (
+        {mode === 'archive' ? (
+          <div className="mt-6">
+            <FeedbackArchiveDashboard
+              records={archiveRecords}
+              onCapture={() => setMode('single')}
+            />
+          </div>
+        ) : mode === 'single' ? (
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(360px,0.85fr)_minmax(0,1.35fr)]">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <SingleInputPanel
@@ -463,6 +761,11 @@ export default function GeoFeedbackPage() {
                 occurredAt={occurredAt}
                 location={location}
                 additionalContext={additionalContext}
+                userNote={userNote}
+                avatarDataUrl={avatarDataUrl}
+                avatarSide={avatarSide}
+                avatarVerticalPosition={avatarVerticalPosition}
+                avatarCropLoading={avatarCropLoading}
                 onProductNameChange={value => {
                   setProductName(value)
                   markDiagnosisOutdated()
@@ -491,12 +794,20 @@ export default function GeoFeedbackPage() {
                   setAdditionalContext(value)
                   markDiagnosisOutdated()
                 }}
+                onUserNoteChange={setUserNote}
+                onAvatarSideChange={handleAvatarSideChange}
+                onAvatarVerticalPositionChange={
+                  handleAvatarVerticalPositionChange
+                }
                 screenshotAttachment={screenshotAttachment}
                 screenshotError={screenshotError}
                 onScreenshotChange={handleScreenshotChange}
                 onRemoveScreenshot={handleRemoveScreenshot}
                 canDiagnose={canDiagnose}
                 loading={loading}
+                recognitionStage={recognitionStage}
+                recognitionProgress={recognitionProgress}
+                onRecognizeAndDiagnose={handleRecognizeAndDiagnose}
                 onDiagnose={handleDiagnose}
               />
             </section>
@@ -548,17 +859,7 @@ export default function GeoFeedbackPage() {
                         setReviewStatus('reviewing')
                         setConfirmedReview(null)
                       }}
-                      onConfirm={() => {
-                        setConfirmedReview({
-                          modifiedFields: getHumanModifiedFields(
-                            diagnosis,
-                            reviewedDiagnosis,
-                            currentFeedbackInput.feedbackText
-                          ),
-                          confirmedAt: new Date().toISOString()
-                        })
-                        setReviewStatus('confirmed')
-                      }}
+                      onConfirm={handleConfirmReview}
                     />
 
                     {reviewStatus === 'confirmed' &&
@@ -640,8 +941,9 @@ function ModeSwitch({
   return (
     <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
       {[
-        { value: 'single' as const, label: '单条反馈' },
-        { value: 'batch' as const, label: '批量反馈' }
+        { value: 'archive' as const, label: '反馈档案' },
+        { value: 'single' as const, label: '截图导入' },
+        { value: 'batch' as const, label: '人工反馈' }
       ].map(item => (
         <button
           key={item.value}
@@ -671,6 +973,11 @@ function SingleInputPanel({
   occurredAt,
   location,
   additionalContext,
+  userNote,
+  avatarDataUrl,
+  avatarSide,
+  avatarVerticalPosition,
+  avatarCropLoading,
   onProductNameChange,
   onProductTypeChange,
   onDeviceInfoChange,
@@ -678,12 +985,18 @@ function SingleInputPanel({
   onOccurredAtChange,
   onLocationChange,
   onAdditionalContextChange,
+  onUserNoteChange,
+  onAvatarSideChange,
+  onAvatarVerticalPositionChange,
   screenshotAttachment,
   screenshotError,
   onScreenshotChange,
   onRemoveScreenshot,
   canDiagnose,
   loading,
+  recognitionStage,
+  recognitionProgress,
+  onRecognizeAndDiagnose,
   onDiagnose
 }: {
   feedbackText: string
@@ -696,6 +1009,11 @@ function SingleInputPanel({
   occurredAt: string
   location: string
   additionalContext: string
+  userNote: string
+  avatarDataUrl: string
+  avatarSide: AvatarSide
+  avatarVerticalPosition: number
+  avatarCropLoading: boolean
   onProductNameChange: (value: string) => void
   onProductTypeChange: (value: string) => void
   onDeviceInfoChange: (value: string) => void
@@ -703,19 +1021,44 @@ function SingleInputPanel({
   onOccurredAtChange: (value: string) => void
   onLocationChange: (value: string) => void
   onAdditionalContextChange: (value: string) => void
+  onUserNoteChange: (value: string) => void
+  onAvatarSideChange: (side: AvatarSide) => void
+  onAvatarVerticalPositionChange: (value: number) => void
   screenshotAttachment: ScreenshotAttachment | null
   screenshotError: string
   onScreenshotChange: (file: File | undefined) => void
   onRemoveScreenshot: () => void
   canDiagnose: boolean
   loading: boolean
+  recognitionStage: RecognitionStage
+  recognitionProgress: number
+  onRecognizeAndDiagnose: () => void
   onDiagnose: () => void
 }) {
   return (
     <div className="space-y-5">
       <PanelHeader
-        title="输入用户反馈"
-        description="粘贴一条地图、出行、航旅或GIS产品反馈。只有反馈原文为必填项。"
+        title="录入微信反馈"
+        description="上传原始截图，核对提取出的建议文本，并保留头像或用户标识。"
+      />
+
+      <ScreenshotPicker
+        userNote={userNote}
+        avatarDataUrl={avatarDataUrl}
+        avatarSide={avatarSide}
+        avatarVerticalPosition={avatarVerticalPosition}
+        avatarCropLoading={avatarCropLoading}
+        onUserNoteChange={onUserNoteChange}
+        onAvatarSideChange={onAvatarSideChange}
+        onAvatarVerticalPositionChange={
+          onAvatarVerticalPositionChange
+        }
+        screenshotAttachment={screenshotAttachment}
+        screenshotError={screenshotError}
+        onScreenshotChange={onScreenshotChange}
+        onRemoveScreenshot={onRemoveScreenshot}
+        recognitionStage={recognitionStage}
+        recognitionProgress={recognitionProgress}
       />
 
       <div>
@@ -724,7 +1067,7 @@ function SingleInputPanel({
             htmlFor="feedbackText"
             className="text-sm font-medium text-slate-700"
           >
-            用户反馈原文
+            从截图提取的用户建议
             <span className="ml-1 text-red-500">*</span>
           </label>
           <span className="text-xs text-slate-400">
@@ -739,7 +1082,7 @@ function SingleInputPanel({
             onFeedbackTextChange(event.target.value)
           }
           rows={7}
-          placeholder="例如：开车去机场时，导航一直让我走一条已经封闭的路，重新规划后还是走这里。"
+          placeholder="上传截图后，在这里核对用户建议文本。"
           className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
         />
 
@@ -756,7 +1099,7 @@ function SingleInputPanel({
           onClick={onUseExample}
           className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
         >
-          使用演示案例
+          填入示例
         </button>
       </div>
 
@@ -777,28 +1120,46 @@ function SingleInputPanel({
         onAdditionalContextChange={onAdditionalContextChange}
       />
 
-      <ScreenshotPicker
-        screenshotAttachment={screenshotAttachment}
-        screenshotError={screenshotError}
-        onScreenshotChange={onScreenshotChange}
-        onRemoveScreenshot={onRemoveScreenshot}
-      />
-
       <button
         type="button"
-        disabled={!canDiagnose}
-        onClick={onDiagnose}
+        disabled={
+          loading ||
+          (!screenshotAttachment && !canDiagnose)
+        }
+        onClick={
+          screenshotAttachment
+            ? onRecognizeAndDiagnose
+            : onDiagnose
+        }
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
       >
-        {loading ? (
+        {recognitionStage === 'recognizing' ? (
+          <>
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+            正在识别文字 {recognitionProgress}%
+          </>
+        ) : recognitionStage === 'analyzing' ? (
+          <>
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+            正在分类分析…
+          </>
+        ) : loading ? (
           <>
             <LoaderCircle className="h-4 w-4 animate-spin" />
             正在诊断…
           </>
         ) : (
           <>
-            <Sparkles className="h-4 w-4" />
-            开始诊断
+            {screenshotAttachment ? (
+              <ScanText className="h-4 w-4" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {screenshotAttachment
+              ? recognitionStage === 'done'
+                ? '重新识别并分析'
+                : '识别并分析'
+              : '分析当前文本'}
           </>
         )}
       </button>
@@ -859,8 +1220,8 @@ function BatchInputPanel({
     <div className="grid gap-6 xl:grid-cols-[minmax(360px,0.7fr)_minmax(0,1fr)]">
       <div className="space-y-5">
         <PanelHeader
-          title="批量反馈"
-          description="每行作为一条反馈，忽略空行，最多处理20条。批量模式第一版不支持每条上传截图。"
+            title="人工反馈"
+            description="逐条录入人工转述的反馈，忽略空行，最多处理20条。截图识别请切换到“截图导入”。"
         />
 
         <div>
@@ -1070,18 +1431,86 @@ function OptionalContextFields({
 }
 
 function ScreenshotPicker({
+  userNote,
+  avatarDataUrl,
+  avatarSide,
+  avatarVerticalPosition,
+  avatarCropLoading,
+  onUserNoteChange,
+  onAvatarSideChange,
+  onAvatarVerticalPositionChange,
   screenshotAttachment,
   screenshotError,
   onScreenshotChange,
-  onRemoveScreenshot
+  onRemoveScreenshot,
+  recognitionStage,
+  recognitionProgress
 }: {
+  userNote: string
+  avatarDataUrl: string
+  avatarSide: AvatarSide
+  avatarVerticalPosition: number
+  avatarCropLoading: boolean
+  onUserNoteChange: (value: string) => void
+  onAvatarSideChange: (side: AvatarSide) => void
+  onAvatarVerticalPositionChange: (value: number) => void
   screenshotAttachment: ScreenshotAttachment | null
   screenshotError: string
   onScreenshotChange: (file: File | undefined) => void
   onRemoveScreenshot: () => void
+  recognitionStage: RecognitionStage
+  recognitionProgress: number
 }) {
+  const [isDragging, setIsDragging] = useState(false)
+
+  useEffect(() => {
+    function handleWindowPaste(event: ClipboardEvent) {
+      const imageFromFiles = Array.from(
+        event.clipboardData?.files ?? []
+      ).find(file => file.type.startsWith('image/'))
+      const imageFromItems = Array.from(
+        event.clipboardData?.items ?? []
+      )
+        .find(item => item.type.startsWith('image/'))
+        ?.getAsFile()
+      const image = imageFromFiles ?? imageFromItems
+
+      if (image) {
+        event.preventDefault()
+        onScreenshotChange(image)
+      }
+    }
+
+    window.addEventListener('paste', handleWindowPaste)
+    return () => window.removeEventListener('paste', handleWindowPaste)
+  }, [onScreenshotChange])
+
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
+    <div
+      onDragEnter={event => {
+        event.preventDefault()
+        setIsDragging(true)
+      }}
+      onDragOver={event => {
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+      }}
+      onDragLeave={event => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+          setIsDragging(false)
+        }
+      }}
+      onDrop={event => {
+        event.preventDefault()
+        setIsDragging(false)
+        onScreenshotChange(event.dataTransfer.files?.[0])
+      }}
+      className={`rounded-xl border border-dashed p-5 transition ${
+        isDragging
+          ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-100'
+          : 'border-slate-300 bg-slate-50'
+      }`}
+    >
       <div className="flex items-start gap-3">
         <ImageIcon className="mt-0.5 h-5 w-5 text-slate-500" />
         <div>
@@ -1089,7 +1518,7 @@ function ScreenshotPicker({
             问题截图
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            截图将作为问题证据附件保留，当前版本暂不进行AI图片分析。
+            拖入图片、选择文件，或直接按 Ctrl+V 粘贴截图。
           </p>
         </div>
       </div>
@@ -1122,19 +1551,62 @@ function ScreenshotPicker({
           </div>
         </div>
       ) : (
-        <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-          <Upload className="h-4 w-4" />
-          选择截图
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="sr-only"
-            onChange={event => {
-              onScreenshotChange(event.target.files?.[0])
-              event.target.value = ''
-            }}
-          />
-        </label>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Upload className="h-4 w-4" />
+            选择截图
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={event => {
+                onScreenshotChange(event.target.files?.[0])
+                event.target.value = ''
+              }}
+            />
+          </label>
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-600">
+            <ClipboardPaste className="h-4 w-4" />
+            Ctrl+V 粘贴
+          </div>
+        </div>
+      )}
+
+      {(recognitionStage === 'recognizing' ||
+        recognitionStage === 'analyzing') && (
+        <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+          <div className="flex items-center justify-between gap-3 text-xs font-medium text-blue-700">
+            <span>
+              {recognitionStage === 'recognizing'
+                ? '正在本地识别截图文字'
+                : '文字已提取，正在分类分析'}
+            </span>
+            <span>
+              {recognitionStage === 'recognizing'
+                ? `${recognitionProgress}%`
+                : '处理中'}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
+            <div
+              className="h-full rounded-full bg-blue-600 transition-all"
+              style={{
+                width: `${
+                  recognitionStage === 'analyzing'
+                    ? 100
+                    : recognitionProgress
+                }%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {recognitionStage === 'done' && (
+        <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          文字已提取并完成分类，档案已保存为待复核。
+        </div>
       )}
 
       {screenshotError && (
@@ -1142,6 +1614,83 @@ function ScreenshotPicker({
           {screenshotError}
         </p>
       )}
+
+      {screenshotAttachment && (
+        <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+          <div className="flex items-center gap-3">
+            {avatarDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- Avatar is cropped locally from the uploaded screenshot.
+              <img
+                src={avatarDataUrl}
+                alt="从截图截取的头像标识"
+                className="h-14 w-14 shrink-0 rounded-full border-2 border-white object-cover shadow-sm ring-1 ring-blue-200"
+              />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-xs text-slate-400 ring-1 ring-blue-200">
+                {avatarCropLoading ? '截取中' : '未截取'}
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-slate-800">头像标识</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                已从截图侧边截取，可切换消息方向并上下微调。
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+            <div className="flex rounded-lg border border-blue-200 bg-white p-1">
+              {(['left', 'right'] as AvatarSide[]).map(side => (
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => onAvatarSideChange(side)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                    avatarSide === side
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {side === 'left' ? '左侧头像' : '右侧头像'}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-3 text-xs text-slate-600">
+              上下位置
+              <input
+                type="range"
+                min="8"
+                max="92"
+                step="1"
+                value={avatarVerticalPosition}
+                onChange={event =>
+                  onAvatarVerticalPositionChange(
+                    Number(event.target.value)
+                  )
+                }
+                className="min-w-0 flex-1 accent-blue-600"
+                aria-label="调整头像在截图中的上下位置"
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
+      <label className="mt-4 block" htmlFor="userNote">
+        <span className="mb-2 block text-sm font-medium text-slate-700">
+          人工备注（可选）
+        </span>
+        <input
+          id="userNote"
+          value={userNote}
+          onChange={event => onUserNoteChange(event.target.value)}
+          placeholder="例如：广州车主群－林先生"
+          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+        />
+        <span className="mt-1.5 block text-xs leading-5 text-slate-500">
+          头像本身就是身份标识；备注只用于帮助团队快速辨认。
+        </span>
+      </label>
     </div>
   )
 }
@@ -1530,6 +2079,173 @@ function parseBatchLines(value: string): string[] {
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean)
+}
+
+function normalizeRecognizedText(value: string): string {
+  const ignoredLine = /^(微信|聊天信息|发送|按住说话|输入|返回|更多)$/i
+
+  return value
+    .replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, '$1')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 1 && !ignoredLine.test(line))
+    .join('\n')
+    .trim()
+}
+
+function toDatetimeLocalValue(date: Date): string {
+  const offset = date.getTimezoneOffset() * 60_000
+
+  return new Date(date.getTime() - offset)
+    .toISOString()
+    .slice(0, 16)
+}
+
+function createScreenshotArchiveRecord({
+  userNote,
+  avatarDataUrl,
+  occurredAt,
+  screenshotName,
+  screenshotDataUrl,
+  feedbackText,
+  diagnosis
+}: {
+  userNote: string
+  avatarDataUrl: string
+  occurredAt: string
+  screenshotName: string
+  screenshotDataUrl: string
+  feedbackText: string
+  diagnosis: DiagnosisResult
+}): FeedbackArchiveRecord {
+  const now = new Date()
+  const capturedDate = occurredAt ? new Date(occurredAt) : now
+
+  return {
+    id: `FB-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getTime()).slice(-5)}`,
+    initials: getArchiveInitials(userNote),
+    avatarTone: 'bg-blue-600',
+    avatarDataUrl,
+    userNote: userNote.trim(),
+    source: '微信截图导入',
+    suggestion: feedbackText,
+    type: toArchiveFeedbackType(diagnosis.issueType),
+    module: diagnosis.productModule,
+    capturedAt: Number.isNaN(capturedDate.getTime())
+      ? now.toLocaleString('zh-CN')
+      : capturedDate.toLocaleString('zh-CN', {
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+    imageName: screenshotName,
+    screenshotDataUrl,
+    status: '待复核'
+  }
+}
+
+function getArchiveInitials(value: string): string {
+  const compact = value
+    .replace(/^wxid_/i, '')
+    .replace(/^avatar_/i, '')
+    .trim()
+
+  return compact.charAt(0).toUpperCase() || '微'
+}
+
+async function createScreenshotThumbnail(file: File): Promise<string> {
+  const imageUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new Image()
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('截图预览生成失败'))
+      image.src = imageUrl
+    })
+
+    const maxDimension = 640
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(image.naturalWidth, image.naturalHeight)
+    )
+    const canvas = document.createElement('canvas')
+
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+
+    const context = canvas.getContext('2d')
+
+    if (!context) return ''
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/jpeg', 0.72)
+  } finally {
+    URL.revokeObjectURL(imageUrl)
+  }
+}
+
+async function createAvatarCrop(
+  file: File,
+  side: AvatarSide,
+  verticalPosition: number
+): Promise<string> {
+  const imageUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new Image()
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('头像截取失败'))
+      image.src = imageUrl
+    })
+
+    const cropSize = Math.max(
+      32,
+      Math.min(
+        image.naturalWidth * 0.16,
+        image.naturalHeight * 0.16
+      )
+    )
+    const horizontalInset = image.naturalWidth * 0.025
+    const sourceX =
+      side === 'left'
+        ? horizontalInset
+        : image.naturalWidth - horizontalInset - cropSize
+    const sourceY = Math.min(
+      image.naturalHeight - cropSize,
+      Math.max(
+        0,
+        image.naturalHeight * (verticalPosition / 100) -
+          cropSize / 2
+      )
+    )
+    const canvas = document.createElement('canvas')
+    canvas.width = 160
+    canvas.height = 160
+    const context = canvas.getContext('2d')
+
+    if (!context) return ''
+
+    context.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      cropSize,
+      cropSize,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    )
+
+    return canvas.toDataURL('image/jpeg', 0.84)
+  } finally {
+    URL.revokeObjectURL(imageUrl)
+  }
 }
 
 function formatFileSize(size: number): string {

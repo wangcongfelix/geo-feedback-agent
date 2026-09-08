@@ -103,62 +103,54 @@ function buildGuardedDiagnosisUserPrompt(
  * 3. 保证返回结构符合DiagnosisSchema；
  * 4. 后续接真实模型时不用重写前端。
  */
-function createMockDiagnosis() {
+function createMockDiagnosis(feedbackInput: FeedbackInput) {
+  const feedbackText = feedbackInput.feedbackText
+  const isBug = /崩溃|闪退|白屏|卡死|打不开|无法打开|一直加载/.test(feedbackText)
+  const isDataIssue = /定位|道路|封路|封闭|地图|地点|地址|POI|路况|航班.*(错误|不准|没更新)/i.test(feedbackText)
+  const isRequirement = /希望|建议|能否|能不能|最好|新增|增加|支持|想要/.test(feedbackText)
+  const issueType = isBug
+    ? 'Bug'
+    : isDataIssue
+      ? '地图或业务数据问题'
+      : isRequirement
+        ? '产品需求'
+        : '使用咨询或操作问题'
+  const productModule = /导航|路线|道路|封路|封闭/.test(feedbackText)
+    ? '路线规划与导航'
+    : /定位|轨迹/.test(feedbackText)
+      ? '定位与轨迹'
+      : /收藏|账号|同步/.test(feedbackText)
+        ? '账号、收藏与数据同步'
+        : /地图|图层/.test(feedbackText)
+          ? '地图展示与图层'
+          : '其他或无法判断'
+
   return {
-    summary: '驾车导航持续推荐封闭道路',
-    userScenario: '用户驾车前往机场，并使用路线规划与导航功能。',
-    productModule: '路线规划与导航',
-    issueType: '地图或业务数据问题',
-    alternativeIssueType: '可能为路线规划Bug，需要进一步排查。',
-    actualResult: '导航持续推荐用户描述为已经封闭的道路。',
-    expectedResult: '用户可能期望导航避开不可通行道路，并重新规划可用路线。',
-    severitySuggestion: 'S2',
+    summary: feedbackText.replace(/\s+/g, ' ').slice(0, 30) || '截图反馈待进一步确认',
+    userScenario: '用户通过微信截图反馈产品使用情况。',
+    productModule,
+    issueType,
+    alternativeIssueType: '无',
+    actualResult: `用户反馈：${feedbackText}`,
+    expectedResult: isRequirement
+      ? `用户期望：${feedbackText}`
+      : '用户可能期望相关功能或数据恢复正常。',
+    severitySuggestion: isBug ? 'S2' : 'S3',
     prioritySuggestion: '待人工判断',
-    confidenceLevel: '中',
-    userFacts: [
-      '用户正在开车去机场。',
-      '用户反馈导航推荐了一条已经封闭的路。',
-      '用户反馈重新规划后仍然推荐该道路。'
-    ],
-    aiInferences: [
-      '可能与道路通行数据未及时更新有关。',
-      '可能与路线规划未正确规避封闭道路有关。'
-    ],
-    evidenceQuotes: [
-      '开车去机场时',
-      '导航一直让我走一条已经封闭的路',
-      '重新规划后还是走这里'
-    ],
+    confidenceLevel: feedbackText.length >= 10 ? '中' : '低',
+    userFacts: [feedbackText],
+    aiInferences: [],
+    evidenceQuotes: [feedbackText.slice(0, 80)],
     missingInformation: [
       {
-        field: '发生时间',
-        reason: '用于判断是否为临时封路、实时路况延迟或长期道路数据问题。',
-        status: '未提供',
-        value: ''
-      },
-      {
-        field: '具体道路或位置',
-        reason: '用于定位涉及的道路数据或路线规划问题。',
-        status: '未提供',
-        value: ''
-      },
-      {
-        field: '起点和终点',
-        reason: '用于复现路线规划结果。',
-        status: '未提供',
-        value: ''
-      },
-      {
-        field: '产品版本',
-        reason: '用于排查是否与特定版本策略或客户端问题有关。',
+        field: '产品版本与复现环境',
+        reason: '用于后续排查和复现当前反馈。',
         status: '未提供',
         value: ''
       }
     ],
-    uncertainty:
-      '当前无法确认这是道路通行数据未更新，还是路线规划策略没有正确规避封闭道路。',
-    recommendedNextAction:
-      '建议补充发生时间、具体道路、起点终点和截图后，由产品经理判断是否提交数据问题单或Bug单。',
+    uncertainty: '当前分类来自截图文字，仍需产品经理结合原图复核。',
+    recommendedNextAction: '建议核对截图原文、用户标识与反馈时间后确认归档。',
     promptVersion: 'v1'
   }
 }
@@ -196,7 +188,7 @@ export async function POST(request: Request) {
     const useMockAI = process.env.USE_MOCK_AI !== 'false'
 
     if (useMockAI) {
-      const mockDiagnosis = createMockDiagnosis()
+      const mockDiagnosis = createMockDiagnosis(feedbackInput)
       const parsedMock = DiagnosisSchema.parse(mockDiagnosis)
       const normalizedMock = normalizeInsufficientIssueType({
         diagnosis: parsedMock,
